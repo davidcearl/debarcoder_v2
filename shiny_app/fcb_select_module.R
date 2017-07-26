@@ -125,6 +125,7 @@ fcb_select_ui <- function(id){
     ns <- NS(id)
     tagList(
         fluidRow(
+            h3("Select FCB population and BC comps"),
             column(width = 4,
                    selectInput(ns("db_fcb_fcs"),
                                label = 'FCB File',

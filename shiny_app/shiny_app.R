@@ -3,10 +3,11 @@ source('./shiny_app/setup_module.R')
 source('./shiny_app/fcb_select_module.R')
 source('./shiny_app/debarcoder_module.R')
 source('./shiny_app/assign_split_module.R')
+source('./shiny_app/upload_module.R')
 
 ###############################################################################
 ui <- navbarPage(title = 'DebarcodeR',
-                 tabPanel("1: Select Mode and Import Experiment",
+                 tabPanel("1: Select Mode and Import Experiment", value = 'tab1',
                           sidebarLayout(
                               sidebarPanel(
                                   helpText("1. Before using this tool you need to have gated the population you want to debarcode on Cytobank and made a compensation matrix"),
@@ -31,10 +32,7 @@ ui <- navbarPage(title = 'DebarcodeR',
                                   helpText("4. Click done when you've finished setting the options and go to the next tab")
                               ),
                               mainPanel(
-                                  fluidRow(
-                                      h3("Select FCB population and BC comps"),
-                                      fcb_select_ui('fcb_select')
-                                  )
+                                  fcb_select_ui('fcb_select')
                               )
                           )
                  ),
@@ -59,9 +57,19 @@ ui <- navbarPage(title = 'DebarcodeR',
                                   helpText("Please specify the correspondence between the barcode levels and the well positions")
                               ),
                               mainPanel(
-                                  fluidRow(
                                       assign_split_ui('assign_split') 
-                                  )
+                              )
+                          )
+                 ),
+                 tabPanel("5: Upload to Cytobank", value = 'tab5',
+                          sidebarLayout(
+                              sidebarPanel(
+                                  helpText("1. Choose whether to clone the original experiment and upload FCS files or whether to create a new experiment"),
+                                  helpText("2. Chose an experiment name"),
+                                  helpText("3. Press Upload")
+                              ),
+                              mainPanel(
+                                  upload_ui('upload')
                               )
                           )
                  )
@@ -77,6 +85,9 @@ server <- function(input, output, session){
     
     assign_split <- callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
     
+    upload <- callModule(upload, 'upload', setup)
+    
+    #session$onSessionEnded(stopApp)
 }
 
 shinyApp(ui, server)
