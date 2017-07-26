@@ -66,7 +66,8 @@ exp_info <- function(input, output, session, cyto_session) {
         exp_comps <- get_compensations(cyto_session(), exp_id)
         exp_gates <- get_gates(cyto_session(), exp_id)
         exp_lut <- get_lut(cyto_session(), exp_id)
-        return(list('exp_pops' = exp_pops,
+        return(list('exp_id' = exp_id,
+                    'exp_pops' = exp_pops,
                     'exp_comps' = exp_comps,
                     'exp_gates' = exp_gates,
                     'exp_lut' = exp_lut))

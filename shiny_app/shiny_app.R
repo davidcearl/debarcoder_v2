@@ -2,6 +2,7 @@ library(shiny)
 source('./shiny_app/setup_module.R')
 source('./shiny_app/fcb_select_module.R')
 source('./shiny_app/debarcoder_module.R')
+source('./shiny_app/assign_split_module.R')
 
 ###############################################################################
 ui <- navbarPage(title = 'DebarcodeR',
@@ -33,7 +34,6 @@ ui <- navbarPage(title = 'DebarcodeR',
                                   fluidRow(
                                       h3("Select FCB population and BC comps"),
                                       fcb_select_ui('fcb_select')
-                                      
                                   )
                               )
                           )
@@ -52,22 +52,30 @@ ui <- navbarPage(title = 'DebarcodeR',
                                   run_debarcoder_ui("run_db")
                               )
                           )
+                 ),
+                 tabPanel("4: Well Assignments", value = 'tab4',
+                          sidebarLayout(
+                              sidebarPanel(
+                                  helpText("Please specify the correspondence between the barcode levels and the well positions")
+                              ),
+                              mainPanel(
+                                  fluidRow(
+                                      assign_split_ui('assign_split') 
+                                  )
+                              )
+                          )
                  )
 )
 
 server <- function(input, output, session){
-    #this will get passed to run_debarcoder
-    #returns named list of reactives
+    
     setup <- callModule(setup, 'setup')
-    
+     
     fcb <- callModule(fcb_select, 'fcb_select', setup)
+     
+    debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
     
-    dcode <- callModule(run_debarcoder, 'run_db', fcb)
-    
-    #barcode info module
-    #bc1 <- callModule(barcode_info, 'bc1', fcs_flowframes)
-    #bc2 <- callModule(barcode_info, 'bc2', fcs_flowframes)
-    
+    assign_split <- callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
     
 }
 

@@ -283,7 +283,8 @@ api_mode <- function(input, output, session){
     api_exp <- reactive({
         return(list('mode' = 'api',
                     'fcs_flowframes' = fcs_flowframes(),
-                    'exp_info' = exp_info()))
+                    'exp_info' = exp_info(),
+                    'cyto_session' = cyto_session()))
     })
     
     return(api_exp)
