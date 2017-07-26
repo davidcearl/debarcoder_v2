@@ -4,6 +4,7 @@ source('./shiny_app/fcb_select_module.R')
 source('./shiny_app/debarcoder_module.R')
 source('./shiny_app/assign_split_module.R')
 source('./shiny_app/upload_module.R')
+source('./shiny_app/sample_tag_module.R')
 
 ###############################################################################
 ui <- navbarPage(title = 'DebarcodeR',
@@ -72,6 +73,16 @@ ui <- navbarPage(title = 'DebarcodeR',
                                   upload_ui('upload')
                               )
                           )
+                 ),
+                 tabPanel("6: Edit Sample Tags", value = "tab6",
+                          sidebarLayout(
+                              sidebarPanel(
+                                  helpText('foo')
+                              ),
+                              mainPanel(
+                                  sample_tag_ui('sample_tag')
+                              )
+                          )
                  )
 )
 
@@ -86,6 +97,8 @@ server <- function(input, output, session){
     assign_split <- callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
     
     upload <- callModule(upload, 'upload', setup)
+    
+    sample_tag <- callModule(sample_tag, 'sample_tag', setup)
     
     #session$onSessionEnded(stopApp)
 }
