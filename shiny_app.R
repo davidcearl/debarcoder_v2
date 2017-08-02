@@ -94,11 +94,11 @@ server <- function(input, output, session){
      
     debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
     
-    assign_split <- callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
+    callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
     
-    upload <- callModule(upload, 'upload', setup)
+    upload_id <- callModule(upload, 'upload', setup)
     
-    sample_tag <- callModule(sample_tag, 'sample_tag', setup)
+    sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
     
     #session$onSessionEnded(stopApp)
 }

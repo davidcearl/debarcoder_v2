@@ -46,7 +46,7 @@ sample_tag_ui <- function(id){
     )
 }
 
-sample_tag <- function(input, output, session, setup){
+sample_tag <- function(input, output, session, setup, upload_id){
     
     output$platemap <- renderUI({
         ns <- session$ns
@@ -79,6 +79,8 @@ sample_tag <- function(input, output, session, setup){
     
     sample_tags_reactive <- eventReactive(input$upload_sample_tags, {
         
+        new_expID <- upload_id()
+        
         if(input$select_platemap == 'upload custom'){
             
             inFile <- input$upload_platemap
@@ -87,10 +89,8 @@ sample_tag <- function(input, output, session, setup){
                 return(NULL)
             
             userst.df <- read.csv(inFile$datapath, header=TRUE)
-            exp.info <- newexp$info
-            new_expID <- exp.info$id
-            #userst.df
-            matched.df <- match_sample_tags(setup()[['cyto_session']], exp.info$id, userst.df)
+
+            matched.df <- match_sample_tags(setup()[['cyto_session']], new_expID, userst.df)
             
             write.table(matched.df, file='mysampletags.tsv', quote=FALSE, sep='\t', row.names = FALSE)
             
@@ -119,10 +119,7 @@ sample_tag <- function(input, output, session, setup){
             userst.df <- read.csv(inFile, header=TRUE)
             userst.df$Timepoints <- str_pad(userst.df$Timepoints,2,pad = 0)
             
-            exp.info <- newexp$info
-            new_expID <- exp.info$id
-            
-            matched.df <- match_sample_tags(setup()[['cyto_session']], exp.info$id, userst.df, updateProgress)
+            matched.df <- match_sample_tags(setup()[['cyto_session']], new_expID, userst.df, updateProgress)
             
             write.table(matched.df, file='mysampletags.tsv', quote=FALSE, sep='\t', row.names = FALSE)
             if (is.function(updateProgress)) {

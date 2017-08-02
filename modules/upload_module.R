@@ -4,7 +4,7 @@ require(CytobankAPI)
 
 upload_fcs <- function(cyto_session, expID, new_exp_name,
                        clone = FALSE, keep_fcs = c(-1), updateProgress = NULL) {
-    new.exp <- NULL
+    
     init_name <- new_exp_name
     if(clone == TRUE) {
         if (is.function(updateProgress)) {
@@ -36,7 +36,7 @@ upload_fcs <- function(cyto_session, expID, new_exp_name,
     
     #experiments.trash(cyto_session, new.exp$id)
     
-    return(new.exp)
+    return(new.exp$id)
 }
 
 ###############################################################################
