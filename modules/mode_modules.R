@@ -8,11 +8,9 @@ source('./modules/exp_info_api_module.R')
 
 ## helper functions
 
-download_fcs_files <- function(cyto_session, 
-                               expID, 
-                               fcsFileIDs, 
-                               lut = NULL, 
-                               updateProgress = NULL){
+download_fcs_files <- function(cyto_session, expID, fcsFileIDs, 
+                               lut = NULL, updateProgress = NULL){
+    
     #removes existing fcs files before downloading newly selected files
     exp_dir <- unlist(list.dirs())[unlist(lapply(list.dirs(),
                                                  grepl, 
@@ -30,10 +28,10 @@ download_fcs_files <- function(cyto_session,
     
     #create directories for each fcs file
     downloadlist <- list()
-    for (fcsFileID in fcsFileIDs) {
+    for(fcsFileID in fcsFileIDs){
         dir.create(file.path(base_dir, expID, fcsFileID))
         setwd(file.path(base_dir, expID, fcsFileID))
-        if (is.function(updateProgress)) {
+        if(is.function(updateProgress)){
             updateProgress(detail = lut[lut$id== fcsFileID, 'filename'])
         }
         
@@ -45,7 +43,7 @@ download_fcs_files <- function(cyto_session,
     return(downloadlist)
 }
 
-get_downloaded_exp_fcs_ids <- function() {
+get_downloaded_exp_fcs_ids <- function(){
     exp_id <- unlist(list.dirs())[unlist(lapply(list.dirs(), 
                                                 grepl, 
                                                 pattern = '^./[0-9]+$'))]
@@ -58,12 +56,12 @@ get_downloaded_exp_fcs_ids <- function() {
                           substr(x, start = (nchar(exp_id)+4), stop = nchar(x))
                       }, 
                       USE.NAMES = FALSE)
-    return(list(exp = exp_id,fcs = fcs_ids))
+    return(list(exp = exp_id, fcs = fcs_ids))
 }
 
-simplify_file_name <- function(file_name) {
+simplify_file_name <- function(file_name){
     
-    if(grepl("Comp|comp", file_name)) {
+    if(grepl("Comp|comp", file_name)){
         file_name <- unlist(strsplit(file_name, "_"))[2]
         split_file_name <- unlist(strsplit(file_name, " "))
         file_name <- split_file_name[1:(length(split_file_name)-2)]
@@ -78,23 +76,25 @@ simplify_file_name <- function(file_name) {
 }
 
 #loads downloaded files to named c() of flowFrames
-downloaded_fcs_files_to_flowSet <- function() {
+downloaded_fcs_files_to_flowSet <- function(){
     #get_downloaded_exp_fcs_ids()[[1]]
     
     if(length(get_downloaded_exp_fcs_ids()[[1]] > 0)){
         
         flowCore_files <- c()
         f_names <- c()
-        for (fcs_file in list.files(pattern = '*.fcs$', recursive = T)) { #this matching pattern is too broad?
+        #is this matching pattern is too broad?
+        for(fcs_file in list.files(pattern = '*.fcs$', recursive = T)){ 
             flowCore_file <- read.FCS(file.path('.', fcs_file))
             flowCore_files <- c(flowCore_files, flowCore_file)
-            f_names <- c(f_names, simplify_file_name(flowCore_file@description$FILENAME))
+            f_names <- c(f_names,
+                         simplify_file_name(flowCore_file@description$FILENAME))
         }
         
         names(flowCore_files) <- f_names
         return(flowCore_files)
     }
-    else {
+    else{
         return('no fcs files')
     }
 }
@@ -123,7 +123,6 @@ api_mode_ui <- function(id){
         verbatimTextOutput(ns("filepaths")),
         actionButton(ns("submit_download"), label = 'Download FCS files'),
         exp_info_ui(ns('exp_info'))
-    
     )
 }
 
@@ -137,7 +136,8 @@ api_mode <- function(input, output, session){
         token <- input$token
         return(token)
     })
-    #funky behavior now, i think when renderUI is call input$submit_connection resets
+    #funky behavior now, i think when renderUI is called
+    #input$submit_connection resets
     #cyto_session must be triggered again
     cyto_session <- eventReactive(input$submit_connection, {
         userlogin <- login_info()
@@ -185,21 +185,20 @@ api_mode <- function(input, output, session){
     
     exp_table <- reactive({
         connection_status <- check_if_connected_reactive()[['bool']]
-        if(connection_status) {
+        if(connection_status){
             withProgress(message = 'fetching experiments from cytobank',
                          detail = 'This may take a while...',
                          value = 0, 
                          expr = {
                              exps <- tryCatch({
-                                 experiments.list(cyto_session())[, c('id',
-                                                                      'experimentName')]
+                                 experiments.list(cyto_session())[, c('id', 'experimentName')]
                              })
                              setProgress(value = 1,
                                          message = 'Done!')
                              return(exps)
                          })
         }
-        else {
+        else{
             return(data.frame())
         }
     })
@@ -293,6 +292,7 @@ api_mode <- function(input, output, session){
 }
 
 ###############################################################################
+## demo_mode module
 
 
 demo_mode_ui <- function(id){
@@ -313,6 +313,7 @@ demo_mode <- function(input, output, session){
 
 
 ###############################################################################
+## reproduce_mode module
 
 reproduce_mode_ui <- function(id){
     ns <- NS(id)

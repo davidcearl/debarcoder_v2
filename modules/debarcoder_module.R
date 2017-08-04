@@ -4,9 +4,15 @@ source('./debarcoder/debarcoder.R')
 
 ## helper functions
 
-debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt, updateProgress = NULL, subsample = 10e3){
-    mydf <- debarcode.1(mydf = fcb_df, mydf.pure = bc1_df, channel = channel, levels = levels, uccutoff = uccutoff, opt = opt, subsample = subsample, updateProgress = updateProgress)
-    #saveed <- save(mydf, file = "mydf2.RData")
+##redundant?
+debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt,
+                          updateProgress = NULL, subsample = 10e3){
+    
+    mydf <- debarcode_1(fcb_df = fcb_df, bc_single_level = bc1_df,
+                        channel = channel, levels = levels,
+                        uccutoff = uccutoff, opt = opt,
+                        subsample = subsample, updateProgress = updateProgress)
+    
     return(mydf)
 }
 
@@ -15,7 +21,7 @@ debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt, update
 #requires debarcoder.R
 #which parameters should user be able to set in shiny ui?
 debarcode_bc2 <- function(bc1_debarcoded, prevchannel, channel, levels){
-    mydf2 <- debarcode.2(mydf = bc1_debarcoded, 
+    mydf2 <- debarcode.2(fcb_df = bc1_debarcoded, 
                          prevchannel = prevchannel,
                          channel = channel,
                          levels = levels)
@@ -128,25 +134,11 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
                                         prevchannel = channel1,
                                         channel = channel2,
                                         levels = input$bc2_levels)
-        debarcoded_bc2
-    })
-    
-    dbc2 <- eventReactive(input$submit_dbc2, {
-        ch <- names(fcb_dfs()[[1]])
         
-        
-        channel1 <- fcb_dfs()[[1]][['bc1_channel']]
-        channel2 <- fcb_dfs()[[1]][['bc2_channel']]
-        
-        debarcoded_bc2 <- debarcode_bc2(bc1_debarcoded = dbc1()[['df']], 
-                                        prevchannel = channel1,
-                                        channel = channel2,
-                                        levels = input$bc2_levels)
-        
-        modulelog <-     list("bc1" = list("coefs"  = dbc1()[["regressionmodel"]],
-                                           "snorm" = dbc1()[["snorm"]],
-                                           "bc1levels" = input$bc1_levels,
-                                           "unccutoff" = input$bc1_unccutoff),
+        modulelog <- list("bc1" = list("coefs"  = dbc1()[["regressionmodel"]],
+                                       "snorm" = dbc1()[["snorm"]],
+                                       "bc1levels" = input$bc1_levels,
+                                       "unccutoff" = input$bc1_unccutoff),
                               "bc2" = list("bc2levels" = "bc2_levelves")
         ) 
         return(list("db" = debarcoded_bc2, "modulelog" = modulelog))
