@@ -1,0 +1,30 @@
+Package: debarcodeR
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: Who wrote it
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Imports: classInt,
+    CytobankAPI,
+    DT,
+    flowCore,
+    ggplot2,
+    hexbin,
+    MASS,
+    mclust,
+    mixsmsn,
+    lattice,
+    pracma,
+    reshape2,
+    rlist,
+    scales,
+    shiny,
+    sn,
+    stringr,
+    viridis
+RoxygenNote: 6.0.1
