@@ -1,5 +1,10 @@
 # debarcoder_v2
 shiny app for processing barcoded flow cytometry data
+
+To run
+
 install devtools
-run devtools::load_all()
-run launch_debarcoder()
+
+devtools::load_all()
+
+launch_debarcoder()
