@@ -123,7 +123,7 @@ server <- function(input, output, session){
 
   upload_id <- callModule(upload, 'upload', setup)
 
-  sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
+  #sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
 
   #session$onSessionEnded(stopApp)
 }

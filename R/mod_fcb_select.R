@@ -203,7 +203,7 @@ fcb_select <- function(input, output, session, setup){
         updateSelectInput(session, 'db_bc_pop', choices = pop_ch)
 
         comps <- names(exp_info()[['exp_comps']])
-        updateSelectInput(session, 'db_fcb_comp', choices = comps)
+        updateSelectInput(session, 'db_fcb_comp', choices = c("internal compensation", comps))
     })
 
     #returns the matrix of the selected comp

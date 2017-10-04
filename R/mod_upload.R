@@ -49,8 +49,19 @@ upload_ui <- function(id) {
     tagList(radioButtons(ns("cloneOpt"),
                          "Upload Option",
                          c("Clone Experiment" = "clone",
-                           "Create New Experiment" = "newexp")),
-            textInput(ns("new_exp_name"), "Experiment Name"),
+                           "Create New Experiment" = "newexp",
+                           "Existing Experiment" = "oldexp")),
+            conditionalPanel(paste0("input['",
+                                    ns("cloneOpt"),
+                                    "'] == 'oldexp' "),
+                             DT::dataTableOutput(ns("experiment_table_upload"))#, ns("upload")
+                             
+            ),
+            conditionalPanel(paste0("input['",
+                                    ns("cloneOpt"),
+                                    "'] == 'newexp' "),
+                             textInput("new_exp_name", "Experiment Name")#, ns("upload")
+            ),
             actionButton(ns("upload"), label = "Upload to Cytobank"))
 }
 
@@ -90,6 +101,11 @@ upload <- function(input, output, session, setup) {
         }
 
     })
-
+    
+    output$experiment_table_upload <- DT::renderDataTable({
+      setup()[['exp_table']]
+    }, selection = list(mode = 'single', selected = c(1), target = 'row'))
+    
+    
     return(newexp)
 }

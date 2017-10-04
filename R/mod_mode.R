@@ -278,7 +278,8 @@ api_mode <- function(input, output, session){
         return(list('mode' = 'api',
                     'fcs_flowframes' = fcs_flowframes(),
                     'exp_info' = exp_info(),
-                    'cyto_session' = cyto_session()))
+                    'cyto_session' = cyto_session(), 
+                    'exp_table' = exp_table()))
     })
 
     return(api_exp)
