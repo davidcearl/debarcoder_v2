@@ -14,34 +14,68 @@ compensate_files <- function(comp_matrix, flowframes) {
     return(list(flowCore_comps, orig = flowCore_uncomps))
 }
 
+# define_gates <- function(gates, lut) {
+#     mygates <- vector("list", length = length(unlist(gates$id)))
+#     names(mygates) <- unlist(gates$name)
+# 
+#     for(i in 1:length(mygates)) {
+#         mygates[[i]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
+#         mygates[[i]][["channels"]] <- as.character(lut[match(mygates[[i]][["channels"]],
+#                                                              lut$normalizedShortNameId),"shortName"])
+# 
+#         mygates[[i]][["type"]] <- gates$type[[i]]
+# 
+#         #print(str(mygates))
+#         if(mygates[[i]][["type"]] == "PolygonGate") {
+#             mygates[[i]][["coords"]] <- do.call(rbind,
+#                                                 lapply(
+#                                                     gates$definition[[i]][[1]][["polygon"]][["vertices"]],
+#                                                     as.numeric)
+#             )
+#         }
+#         if(mygates[[i]][["type"]] == "RectangleGate") {
+#             mygates[[i]][["coords"]] <- matrix(
+#                 unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
+#         }
+# 
+#         mygates[[i]][["coords"]]
+#         colnames(mygates[[i]][["coords"]]) <- mygates[[i]][["channels"]]
+#     }
+#     return(mygates)
+# }
+
 define_gates <- function(gates, lut) {
-    mygates <- vector("list", length = length(unlist(gates$id)))
-    names(mygates) <- unlist(gates$name)
-
-    for(i in 1:length(mygates)) {
-        mygates[[i]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
-        mygates[[i]][["channels"]] <- as.character(lut[match(mygates[[i]][["channels"]],
-                                                             lut$normalizedShortNameId),"shortName"])
-
-        mygates[[i]][["type"]] <- gates$type[[i]]
-
-        #print(str(mygates))
-        if(mygates[[i]][["type"]] == "PolygonGate") {
-            mygates[[i]][["coords"]] <- do.call(rbind,
-                                                lapply(
-                                                    gates$definition[[i]][[1]][["polygon"]][["vertices"]],
-                                                    as.numeric)
-            )
-        }
-        if(mygates[[i]][["type"]] == "RectangleGate") {
-            mygates[[i]][["coords"]] <- matrix(
-                unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
-        }
-
-        mygates[[i]][["coords"]]
-        colnames(mygates[[i]][["coords"]]) <- mygates[[i]][["channels"]]
+  mygates <- vector("list", length = length(unlist(gates$id)))
+  names(mygates) <- unlist(gates$name)
+  #print(str(mygates))
+  
+  for(i in 1:length(mygates)) {
+    mygates[[i]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
+    mygates[[i]][["channels"]] <- as.character(lut[match(mygates[[i]][["channels"]],
+                                                         lut$normalizedShortNameId),"shortName"])
+    
+    mygates[[i]][["type"]] <- gates$type[[i]]
+    
+    #print(str(mygates))
+    if(mygates[[i]][["type"]] == "PolygonGate") {
+      mygates[[i]][["coords"]] <- do.call(rbind,
+                                          lapply(
+                                            gates$definition[[i]][[1]][["polygon"]][["vertices"]],
+                                            as.numeric)
+      )
+    } else if(mygates[[i]][["type"]] == "RectangleGate") {
+      mygates[[i]][["coords"]] <- matrix(
+        unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
+    } else{
+      warning(paste(mygates[[i]][["type"]], "are not currently supported!"))
+      break
+      
     }
-    return(mygates)
+    #print(str(mygates[[i]]))
+    mygates[[i]][["coords"]]
+    colnames(mygates[[i]][["coords"]]) <- mygates[[i]][["channels"]]
+  }
+  return(mygates)
 }
 ######
 
