@@ -110,15 +110,57 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
     })
 
     output$assign_plot <- renderPlot({
-        df <- dbc1()[['df']]
-        names(df) <- pracma::strRep(pracma::strRep(names(df), "-", '_'), " ", "_") #sanitize for ggplot
-        yaxis <- pracma::strRep(pracma::strRep(dbc1()[['channel']], "-", '_'), " ", "_")
-        xaxis <- 'SSC_A'
-        ggplot2::ggplot(df, ggplot2::aes_string(y = yaxis, x = xaxis)) +
-          ggplot2::scale_y_continuous(trans = logicle_trans()) +
-          ggplot2::geom_point(ggplot2::aes(col = as.factor(df$bc1))) +
-          ggplot2::scale_color_discrete(name = "BC1 Levels") +
-          ggplot2::ggtitle("BC 1 assignments")
+      df <- dbc1()[['df']]
+      names(df) <- pracma::strRep(pracma::strRep(names(df), "-", '_'), " ", "_") #sanitize for ggplot
+      yaxis <- pracma::strRep(pracma::strRep(dbc1()[['channel']], "-", '_'), " ", "_")
+      xaxis <- 'SSC_A'
+      
+      #print(names(df))
+      
+      # print(str(df$bc1))
+      # print(table(df$bc1))
+      
+      df$bc1 <- factor(df$bc1, levels = c(names(tail(table(df$bc1),-1)), "0"), ordered = TRUE)
+      levels(df$bc1)[length(levels(df$bc1))] <- "Uncertain"
+      
+      pop.yields <- as.data.frame(table(df$bc1)) #obtaining counts
+      
+      df.split <- split(df, df$bc1)
+      mydf <- lapply(df.split, #obtain medians for each population
+                     function(df) {
+                       c(median(df[,xaxis]),
+                         median(df[,yaxis]))
+                     }
+      ) 
+      
+      
+      medians <- as.data.frame(do.call(rbind, mydf))
+      pop.yields.df <- cbind(pop.yields, medians)
+      colnames(pop.yields.df) <- c("bc1", "count", xaxis, yaxis)
+      
+      pop.yields.df$precent <- pop.yields.df$count/sum(pop.yields.df$count)*100 #percent of cells in each pop
+      pop.yields.df$label <- paste0(prettyNum(pop.yields.df$count, big.mark=","), #pretty labels
+                                    " ", "(", round(pop.yields.df$precent,1), "%)")
+      
+      #these lines clean-up the uncertain cells population label
+      pop.yields.df[nrow(pop.yields.df), "label"] <- paste("Uncertain: \n", tail(pop.yields.df$label,1)) 
+      pop.yields.df["Uncertain",c(xaxis,yaxis)] <- c(quantile(df[,xaxis], 0.99), quantile(df[,yaxis], 0.01))
+      
+      #reset the colors such that uncertain is grey
+      ggplotColours <- function(n = 6, h = c(0, 360) + 15){
+        if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360/n
+        hcl(h = (seq(h[1], h[2], length = n)), c = 100, l = 65)
+      }
+      
+      mycolors <- c(ggplotColours(length(table(df$bc1))-1), "#636363")
+      
+      # print(table(df$bc1))
+      ggplot2::ggplot(df, ggplot2::aes_string(y = yaxis, x = xaxis)) +
+        ggplot2::scale_y_continuous(trans = logicle_trans()) +
+        ggplot2::geom_point(ggplot2::aes(col = as.factor(df$bc1))) +
+        ggplot2::geom_label(data = pop.yields.df, ggplot2::aes(label = label, colour = bc1), show.legend = FALSE) + 
+        ggplot2::scale_color_manual(name = "BC1 Levels", values=mycolors) + 
+        ggplot2::ggtitle("BC 1 assignments")
     })
 
     dbc2 <- eventReactive(input$submit_dbc2, {
