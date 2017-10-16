@@ -40,7 +40,10 @@ get_lut <- function(cyto_session, exp_id ) {
                             scales_df,
                             by.x= "normalizedShortNameId",
                             by.y ="normalizedShortNameId")
-    
+    extrarow <- data.frame(-1, "Null", "Null", -1, 0, 0, 0, 0, 0, 1)
+    colnames(extrarow) <- colnames(lut)
+    lut <- rbind(lut, extrarow)
+
     return(lut)
 }
 
