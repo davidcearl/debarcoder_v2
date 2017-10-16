@@ -338,8 +338,13 @@ fcb_select <- function(input, output, session, setup){
         comp_name <- input$db_fcb_comp
         if(comp_name == 'none'){
             comp_name <- names(exp_info()[['exp_comps']])[1]
+        } else if (comp_name == "internal compensation") { #pulls internal comp
+          print(names(flowCore::description(fcs_flowframes()[[1]])))
+          comp.matrix <- flowCore::description(fcs_flowframes()[[1]])[["SPILL"]]
+        } else {
+          comp.matrix <- exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']]
         }
-        return(exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']])
+        return(comp.matrix)
     })
 
     fcb_dfs <- eventReactive(input$df_button, {
