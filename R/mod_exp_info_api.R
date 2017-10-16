@@ -40,6 +40,7 @@ get_lut <- function(cyto_session, exp_id ) {
                             scales_df,
                             by.x= "normalizedShortNameId",
                             by.y ="normalizedShortNameId")
+    
     return(lut)
 }
 
