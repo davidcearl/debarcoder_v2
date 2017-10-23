@@ -192,7 +192,7 @@ gate_population <- function(flow_frame, population, poplist, gatelist, gate_defs
       flow_frame <- gatein(flow_frame, gate.i)
     } else if (gate_defs[[i]][["type"]] == "PolygonGate") {
       gate.i <- flowCore::polygonGate(gate_defs[[i]][["coords"]])
-      flowViz::xyplot(axis, flow_frame, filter=gate.i)
+      #flowViz::xyplot(axis, flow_frame, filter=gate.i)
       flow_frame <- gatein(flow_frame, gate.i)
       
     } else if (gate_defs[[i]][["type"]] == "EllipseGate") {
@@ -339,7 +339,6 @@ fcb_select <- function(input, output, session, setup){
         if(comp_name == 'none'){
             comp_name <- names(exp_info()[['exp_comps']])[1]
         } else if (comp_name == "internal compensation") { #pulls internal comp
-          print(names(flowCore::description(fcs_flowframes()[[1]])))
           comp.matrix <- flowCore::description(fcs_flowframes()[[1]])[["SPILL"]]
         } else {
           comp.matrix <- exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']]
@@ -356,7 +355,6 @@ fcb_select <- function(input, output, session, setup){
         gate_defs <- define_gates(exp_info()[['exp_gates']],
                                   exp_info()[['exp_lut']])
 
-        print(comped_flowCore_files)
 
         pop_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_fcb_fcs]],
                                                input$db_pop,
