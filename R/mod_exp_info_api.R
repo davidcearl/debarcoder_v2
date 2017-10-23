@@ -52,21 +52,47 @@ get_lut <- function(cyto_session, exp_id ) {
 exp_info_ui <- function(id) {
     ns <- NS(id)
     tagList(
-        actionButton(ns('get_info_button'), 'Get exp info')
+        actionButton(ns('get_info_button'), 'Proceed')
     )
 }
 
 ## server
 
-exp_info <- function(input, output, session, cyto_session) {
+exp_info <- function(input, output, session, cyto_session, x) {
+
+  
     #get experiment info from cytobank api
     #mayber add check_connection conditional
     exp_info <- eventReactive(input$get_info_button, {
+        progress <- shiny::Progress$new()
+        progress$set(message = "Gathering Experiment info...", value = 0.2)
+        # Close the progress when this reactive exits (even if there's an error)
+        on.exit(progress$close())
+        
+        n <- 5
+        updateProgress <- function(detail = NULL) {
+          progress$inc(amount = 1/n, detail = detail)
+        }
         exp_id <- exp_id_from_downloaded_files()
+        if (is.function(updateProgress)) {
+          updateProgress(detail = "Fetching Populations")
+        }
         exp_pops <- get_populations(cyto_session(), exp_id)
+        if (is.function(updateProgress)) {
+          updateProgress(detail = "Fetching Compesnations")
+        }
         exp_comps <- get_compensations(cyto_session(), exp_id)
+        if (is.function(updateProgress)) {
+          updateProgress(detail = "Fetching Gating Scheme")
+        }
         exp_gates <- get_gates(cyto_session(), exp_id)
+        if (is.function(updateProgress)) {
+          updateProgress(detail = "Fetching Scales")
+        }
         exp_lut <- get_lut(cyto_session(), exp_id)
+        
+        updateNavbarPage(x, "mainNavbarPage", "tab2") #proceed to next page
+        
         return(list('exp_id' = exp_id,
                     'exp_pops' = exp_pops,
                     'exp_comps' = exp_comps,

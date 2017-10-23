@@ -123,7 +123,7 @@ api_mode_ui <- function(id){
 
 ## server function
 
-api_mode <- function(input, output, session){
+api_mode <- function(input, output, session, x){
     login_info <- reactive({
         #will only run authenticate if user name and token are entered
         validate(c(
@@ -181,17 +181,27 @@ api_mode <- function(input, output, session){
     exp_table <- reactive({
         connection_status <- check_if_connected_reactive()[['bool']]
         if(connection_status){
-            withProgress(message = 'fetching experiments from cytobank',
-                         detail = 'This may take a while...',
-                         value = 0,
-                         expr = {
-                             exps <- tryCatch({
-                               CytobankAPI::experiments.list(cyto_session())[, c('id', 'experimentName')]
-                             })
-                             setProgress(value = 1,
-                                         message = 'Done!')
-                             return(exps)
-                         })
+          progress <- shiny::Progress$new()
+          progress$set(message = "Fetching experiments from cytobank",
+                       detail = ,
+                       value = 0.2)
+          on.exit(progress$close())
+          n <- 2
+          updateProgress <- function(detail = NULL) {
+            progress$inc(amount = 1/n, detail = detail)
+          }
+            # withProgress(message = 'fetching experiments from cytobank',
+            #              detail = 'This may take a while...',
+            #              value = 0,
+            #              expr = {
+         exps <- tryCatch({
+           updateProgress(detail = "This may take a while...")
+           CytobankAPI::experiments.list(cyto_session())[, c('id', 'experimentName')]
+         })
+         updateProgress(detail = "Done!")
+         
+         return(exps)
+                         # })
         }
         else{
             return(data.frame())
@@ -272,7 +282,7 @@ api_mode <- function(input, output, session){
                                    }
     )
 
-    exp_info <- callModule(exp_info, 'exp_info', cyto_session)
+    exp_info <- callModule(exp_info, 'exp_info', cyto_session, x)
 
     api_exp <- reactive({
         return(list('mode' = 'api',
@@ -298,8 +308,10 @@ demo_mode_ui <- function(id){
     )
 }
 
-demo_mode <- function(input, output, session){
+demo_mode <- function(input, output, session, x){
     demo_exp <- eventReactive(input$submit_demo, {
+        print("demo submitted")
+        updateNavbarPage(x, "mainNavbarPage", "tab2")
         load('./data/demo_data.Rdata')
         return(demo_data)
     })

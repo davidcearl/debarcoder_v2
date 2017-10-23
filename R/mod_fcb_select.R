@@ -192,7 +192,6 @@ gate_population <- function(flow_frame, population, poplist, gatelist, gate_defs
       flow_frame <- gatein(flow_frame, gate.i)
     } else if (gate_defs[[i]][["type"]] == "PolygonGate") {
       gate.i <- flowCore::polygonGate(gate_defs[[i]][["coords"]])
-      flowViz::xyplot(axis, flow_frame, filter=gate.i)
       flow_frame <- gatein(flow_frame, gate.i)
       
     } else if (gate_defs[[i]][["type"]] == "EllipseGate") {

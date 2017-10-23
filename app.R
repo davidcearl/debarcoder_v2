@@ -1,6 +1,10 @@
+source("./R/loadfiles.R")
+
+
 ###############################################################################
-ui <- navbarPage(title = 'DebarcodeR',
-                 tabPanel("1: Select Mode and Import Experiment",
+ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
+                 tabPanel(title = "1: Select Mode and Import Experiment",
+                          id = 'tab1',
                           value = 'tab1',
                           sidebarLayout(
                             sidebarPanel(
@@ -26,7 +30,9 @@ ui <- navbarPage(title = 'DebarcodeR',
                               setup_ui('setup')
                             )
                               )),
-                 tabPanel("2: Select FCB Population", value = 'tab2',
+                 tabPanel(title = "2: Select FCB Population",
+                          id = 'tab2',
+                          value = 'tab2',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("1. Make sure the right files are
@@ -112,19 +118,19 @@ ui <- navbarPage(title = 'DebarcodeR',
                  )
 
 server <- function(input, output, session){
-
-  setup <- callModule(setup, 'setup')
-
+  
+  setup <- callModule(setup, 'setup', x = session)
+  
   fcb <- callModule(fcb_select, 'fcb_select', setup)
-
+  
   debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
-
+  
   callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
-
+  
   upload_id <- callModule(upload, 'upload', setup)
-
+  
   #sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
-
+  
   #session$onSessionEnded(stopApp)
 }
 
