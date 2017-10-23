@@ -288,13 +288,15 @@ fcb_select_ui <- function(id){
         sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
         sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
 
-        actionButton(ns('df_button'), label = 'Done'),
+        actionButton(ns('df_button'), label = 'Apply Gating'),
+        actionButton(ns('proceed_button'), label = 'Proceed'),
         plotOutput(ns('cutoff_plot'))
+
     )
 }
 
 
-fcb_select <- function(input, output, session, setup){
+fcb_select <- function(input, output, session, setup, x){
 
     fcs_flowframes <- reactive(
         setup()[['fcs_flowframes']]
@@ -345,7 +347,11 @@ fcb_select <- function(input, output, session, setup){
         }
         return(comp.matrix)
     })
-
+    
+    observeEvent(input$proceed_button, {
+      updateNavbarPage(x, "mainNavbarPage", "tab3")
+    })
+    
     fcb_dfs <- eventReactive(input$df_button, {
 
         comp <- comp_to_use()
@@ -355,7 +361,6 @@ fcb_select <- function(input, output, session, setup){
         gate_defs <- define_gates(exp_info()[['exp_gates']],
                                   exp_info()[['exp_lut']])
 
-        print(comped_flowCore_files)
 
         pop_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_fcb_fcs]],
                                                input$db_pop,
@@ -476,6 +481,7 @@ fcb_select <- function(input, output, session, setup){
           ggplot2::geom_hline(yintercept = bc2cut, col = "blue", size = 1) +
           ggplot2::ggtitle("Removing non-barcoded cells")
     }, width = 600, height = 600)
+    
 
 
     return(fcb_dfs)

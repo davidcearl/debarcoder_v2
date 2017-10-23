@@ -310,7 +310,6 @@ demo_mode_ui <- function(id){
 
 demo_mode <- function(input, output, session, x){
     demo_exp <- eventReactive(input$submit_demo, {
-        print("demo submitted")
         updateNavbarPage(x, "mainNavbarPage", "tab2")
         load('./data/demo_data.Rdata')
         return(demo_data)

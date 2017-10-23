@@ -55,7 +55,9 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                             )
                               )
                               ),
-                 tabPanel("3: Debarcode", value = 'tab3',
+                 tabPanel(title = "3: Debarcode",
+                          id = 'tab3',
+                          value = 'tab3',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("1. Specifiy the number of levels
@@ -118,10 +120,11 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                  )
 
 server <- function(input, output, session){
-  
+  #x=session syntax allows updateNavbarpage to automatically advance to next
+  #tab as approriate
   setup <- callModule(setup, 'setup', x = session)
   
-  fcb <- callModule(fcb_select, 'fcb_select', setup)
+  fcb <- callModule(fcb_select, 'fcb_select', setup, x = session)
   
   debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
   
