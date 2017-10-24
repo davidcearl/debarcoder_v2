@@ -198,10 +198,10 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
 
 ###############################################################################
 
-doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, opt,
+doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, trans,
                                 val3 = NULL, constrained_flag = 1,
-                                columns = NULL, monodir = NULL) {
-
+                                columns = NULL, monodir = NULL, cofactor = NULL) {
+  print(cofactor)
   lo <- 1 #log offset
   fsc_limits <- c(min(single_level_bc['FSC-A']), max(single_level_bc['FSC-A']))
   ssc_limits <- c(min(single_level_bc['SSC-A']), max(single_level_bc['SSC-A']))
@@ -218,14 +218,18 @@ doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, opt
 
     rm <- regression_model_matrix()
 
-    switch (opt,
-            asinh = {
+    switch (trans,
+            none = {
               D <- D
               D2 <- D2
             },
             logF = {
               D <- cbind(D[1:2], log(D[3] + lo))
               D2 <- cbind(D2[1:2], log(D2[3] + lo))
+            },
+            arcsinh = {
+              D <- cbind(D[1:2], asinh(D[3]/cofactor))
+              D2 <- cbind(D2[1:2], asinh(D2[3]/cofactor))
             }
     )
 
@@ -275,11 +279,14 @@ doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, opt
 
     R2 <- as.numeric(Nresidual2) + as.vector(t(weight)%*%XO[,4]/sum(weight))
 
-    if (opt == 'logF') {
+    if (trans == 'logF') {
         data.corr <- exp(R2) - lo
-    } else if (opt == 'asinh') {
+    } else if (trans == 'none') {
         data.corr <- R2
+    } else if (trans == 'arcsinh') {
+        data.corr <- sinh(R2)*cofactor
     }
+  
 
     print(paste(columns[n], "complete"))
     data.corr.ls[[n]] <- data.corr

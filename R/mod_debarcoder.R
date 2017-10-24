@@ -4,12 +4,11 @@
 
 ##redundant?
 debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt,
-                          updateProgress = NULL, subsample = 10e3){
-
+                          updateProgress = NULL, subsample = 10e3, cofactor =NULL){
     mydf <- debarcode_1(fcb_df = fcb_df, bc_single_level = bc1_df,
                         channel = channel, levels = levels,
-                        uccutoff = uccutoff, opt = opt,
-                        subsample = subsample, updateProgress = updateProgress)
+                        uccutoff = uccutoff, opt = opt, trans = 'arcsinh',
+                        subsample = subsample, updateProgress = updateProgress, cofactor_bc1 = cofactor)
 
     return(mydf)
 }
@@ -18,11 +17,13 @@ debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt,
 #takes fcb_df_po_debarcoded, ??not pb_df??
 #requires debarcoder.R
 #which parameters should user be able to set in shiny ui?
-debarcode_bc2 <- function(bc1_debarcoded, prevchannel, channel, levels){
+debarcode_bc2 <- function(bc1_debarcoded, prevchannel, channel, levels, cofactor_bc1 = NULL, cofactor_bc2 = NULL){
     mydf2 <- debarcode.2(fcb_df = bc1_debarcoded,
                          prevchannel = prevchannel,
                          channel = channel,
-                         levels = levels)
+                         levels = levels, 
+                         cofactor_bc1 = cofactor_bc1,
+                         cofactor_bc2 = cofactor_bc2)
     return(mydf2)
 }
 
@@ -65,7 +66,6 @@ run_debarcoder_ui <- function(id) {
 ###
 
 run_debarcoder <- function(input, output, session, fcb_dfs) {
-
     dbc1 <- eventReactive(input$submit_dbc1, {
 
         #####
@@ -94,6 +94,9 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
         ch <- names(fcb_dfs()[[1]])
         bc1_channel <- fcb_dfs()[[1]][['bc1_channel']]
 
+        lut <- fcb_dfs()[["modulelog"]][["exp_info"]][["exp_lut"]]
+        cofactor_bc1<- lut[(which(lut$shortName == bc1_channel)), "cofactor"]
+
         debarcoded_bc1 <- debarcode_bc1(fcb_df = fcb_df,
                                         bc1_df = bc1_df,
                                         channel = bc1_channel,
@@ -101,7 +104,8 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
                                         uccutoff = input$bc1_unccutoff,
                                         opt = input$bc1_model,
                                         updateProgress= updateProgress,
-                                        subsample = input$subsample
+                                        subsample = input$subsample, 
+                                        cofactor = cofactor_bc1
         )
     })
 
@@ -169,11 +173,17 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
 
         channel1 <- fcb_dfs()[[1]][['bc1_channel']]
         channel2 <- fcb_dfs()[[1]][['bc2_channel']]
+        lut <- fcb_dfs()[["modulelog"]][["exp_info"]][["exp_lut"]]
+        cofactor_bc1<- lut[(which(lut$shortName == channel1)), "cofactor"]
+        cofactor_bc2<- lut[(which(lut$shortName == channel2)), "cofactor"]
+        
 
         debarcoded_bc2 <- debarcode_bc2(bc1_debarcoded = dbc1()[['df']],
                                         prevchannel = channel1,
                                         channel = channel2,
-                                        levels = input$bc2_levels)
+                                        levels = input$bc2_levels, 
+                                        cofactor_bc1 = cofactor_bc1,
+                                        cofactor_bc2 = cofactor_bc2)
 
         modulelog <- list("bc1" = list("coefs"  = dbc1()[["regressionmodel"]],
                                        "snorm" = dbc1()[["snorm"]],
