@@ -18,7 +18,6 @@ setup_ui <- function(id){
 ## server
 #caller expects return of list of flow_set and exp_info
 setup <- function(input, output, session, x){
-    print(session)
     demo_exp <- callModule(demo_mode, 'demo_mode', x)
     api_exp <- callModule(api_mode, 'api_mode', x)
     callModule(reproduce_mode, 'reproduce_mode')

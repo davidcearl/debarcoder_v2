@@ -21,7 +21,7 @@ get_gates <- function(cyto_session, exp_id){
 }
 
 get_compensations <- function(cyto_session, exp_id) {
-    return(CytobankAPI::compensations.list(cyto_session, exp_id, output = 'default'))
+    return(CytobankAPI::compensations.list(cyto_session, exp_id, output = 'default', timeout = 30))
 }
 
 #name lookup table for consistent naming?
@@ -33,9 +33,11 @@ get_lut <- function(cyto_session, exp_id ) {
                           output = "default")
     mypanel <- CytobankAPI::panels.list(cyto_session,
                            exp_id,
-                           output = "default")[["Panel 1"]][["channels"]]
+                           output = "default")[[1]][["channels"]]
     scales_df <- as.data.frame(lapply(scales, function(X) unname(unlist(X))))
     mypanel_df <- as.data.frame(lapply(mypanel, function(X) unname(unlist(X))))
+
+    
     lut <- merge.data.frame(mypanel_df,
                             scales_df,
                             by.x= "normalizedShortNameId",
@@ -82,6 +84,7 @@ exp_info <- function(input, output, session, cyto_session, x) {
           updateProgress(detail = "Fetching Compesnations")
         }
         exp_comps <- get_compensations(cyto_session(), exp_id)
+
         if (is.function(updateProgress)) {
           updateProgress(detail = "Fetching Gating Scheme")
         }

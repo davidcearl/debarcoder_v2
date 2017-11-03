@@ -80,7 +80,9 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                             )
                               )
                               ),
-                 tabPanel("4: Well Assignments", value = 'tab4',
+                 tabPanel("4: Well Assignments",
+                          value = 'tab4',
+                          id = 'tab4',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("Please specify the correspondence
@@ -92,7 +94,9 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                             )
                               )
                  ),
-                 tabPanel("5: Upload to Cytobank", value = 'tab5',
+                 tabPanel("5: Upload to Cytobank",
+                          value = 'tab5',
+                          id = 'tab5',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("1. Choose whether to clone the
@@ -107,7 +111,11 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                             )
                             )
                           ),
-                 tabPanel("6: Edit Sample Tags", value = "tab6",
+                 tabPanel("6: Edit Sample Tags", value = "
+                          
+                          
+                          
+                          tab6",
                           sidebarLayout(
                             sidebarPanel(
                               helpText('foo')
@@ -126,15 +134,15 @@ server <- function(input, output, session){
   
   fcb <- callModule(fcb_select, 'fcb_select', setup, x = session)
   
-  debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
+  debarcoded <- callModule(run_debarcoder, 'run_db', fcb, x = session)
   
-  callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
+  callModule(assign_split, 'assign_split', setup, fcb, debarcoded, x = session)
   
   upload_id <- callModule(upload, 'upload', setup)
   
   #sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
   
-  #session$onSessionEnded(stopApp)
+  session$onSessionEnded(stopApp)
 }
 
 shinyApp(ui, server)

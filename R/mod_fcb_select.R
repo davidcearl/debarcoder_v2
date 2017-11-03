@@ -266,23 +266,23 @@ fcb_select_ui <- function(id){
             column(width = 4,
                    selectInput(ns("db_bc1_channel"),
                                label = 'BC1 Channel',
-                               c('none')),
-                   selectInput(ns("db_bc1_fcs"),
-                               label = 'BC1 Comp (optional)',
-                               c('none'))
+                               c('none'))#,
+                  # selectInput(ns("db_bc1_fcs"),
+                   #            label = 'BC1 Comp (optional)',
+                    #           c('none'))
             ),
             column(width = 4,
                    selectInput(ns("db_bc2_channel"),
                                label = 'BC2 Channel',
-                               c('none')),
-                   selectInput(ns("db_bc2_fcs"),
-                               label = 'BC2 Comp (optional)',
-                               c('none'))
+                               c('none'))#,
+                   #selectInput(ns("db_bc2_fcs"),
+                    #           label = 'BC2 Comp (optional)',
+                     #          c('none'))
             ),
-            column(width = 3,
-                   selectInput(ns("db_bc_pop"),
-                               label = 'Comp Population',
-                               c('none'))
+            column(width = 3#,
+                   #sel1ectInput(ns("db_bc_pop"),
+                    #           label = 'Comp Population',
+                     #          c('none'))
             )
         ),
         sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
@@ -340,7 +340,6 @@ fcb_select <- function(input, output, session, setup, x){
         if(comp_name == 'none'){
             comp_name <- names(exp_info()[['exp_comps']])[1]
         } else if (comp_name == "internal compensation") { #pulls internal comp
-          print(names(flowCore::description(fcs_flowframes()[[1]])))
           comp.matrix <- flowCore::description(fcs_flowframes()[[1]])[["SPILL"]]
         } else {
           comp.matrix <- exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']]
@@ -374,7 +373,8 @@ fcb_select <- function(input, output, session, setup, x){
                                  bc1_cutoff = input$bc1_sig_cutoff,
                                  bc2_cutoff  = input$bc2_sig_cutoff)
         uncompsubset <- uncomp[[input$db_fcb_fcs]]
-        if(input$db_bc1_fcs != 'none') {
+        #if(input$db_bc1_fcs != 'none') {
+        if(FALSE) {
             bc1_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_bc1_fcs]],
                                                    input$db_bc_pop,
                                                    exp_info()[['exp_pops']],
@@ -393,7 +393,9 @@ fcb_select <- function(input, output, session, setup, x){
             bc1_df[['df']] <- NULL
         }
 
-        if(input$db_bc2_fcs != "none") {
+        #if(input$db_bc2_fcs != "none") { #this was for when singly stain controls were included, may eventually bring it back 
+        if(FALSE) {
+            
             bc2_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_bc2_fcs]],
                                                    input$db_bc_pop,
                                                    exp_info()[['exp_pops']],

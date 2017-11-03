@@ -62,13 +62,19 @@ upload_fcs <- function(cyto_session, expID, new_exp_name = "newexp",
   }
   
   uploadlist <- list.files(file.path(expID, "debarcoded"))
-  
+  print(uploadlist)
   #print(new.exp$id)
   for(i in 1:length(uploadlist)) {
     if (is.function(updateProgress)) {
       updateProgress(detail = uploadlist[[i]])
     }
-    CytobankAPI::fcs_files.upload(cyto_session, new.exp$id, file.path(expID, "debarcoded", uploadlist[i]))
+    tryCatch( #this causes it to loop to ignore teh "API did not reutrn JSON error"
+    CytobankAPI::fcs_files.upload(cyto_session,
+                                  new.exp$id,
+                                  file.path(expID, "debarcoded", uploadlist[i]))
+    , error = function(cond){cond}
+    )  
+    
   }
   
   #neccessary to get around the multiple panel bug

@@ -54,6 +54,7 @@ run_debarcoder_ui <- function(id) {
             sliderInput(ns('bc2_unccutoff'), label = "Assignment Cutoff", min = 0, max = 0.5, value = 0.05, step = 0.01),
             helpText("Not currently implemented"),
             actionButton(ns('submit_dbc2'), label = 'Run Debarcoder on BC2'),
+            actionButton(ns('proceed_button'), label = 'Proceed'),
             #actionButton(ns('skip'), label = 'Skip BC2'),
             h4('BC2 assignment plot'),
             plotOutput(ns('assign_plot2'))
@@ -65,7 +66,7 @@ run_debarcoder_ui <- function(id) {
 # modulue reactive fuction
 ###
 
-run_debarcoder <- function(input, output, session, fcb_dfs) {
+run_debarcoder <- function(input, output, session, fcb_dfs, x) {
     dbc1 <- eventReactive(input$submit_dbc1, {
 
         #####
@@ -189,7 +190,7 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
                                        "snorm" = dbc1()[["snorm"]],
                                        "bc1levels" = input$bc1_levels,
                                        "unccutoff" = input$bc1_unccutoff),
-                              "bc2" = list("bc2levels" = "bc2_levelves")
+                              "bc2" = list("bc2levels" = input$bc2_levels)
         )
         return(list("db" = debarcoded_bc2, "modulelog" = modulelog))
     })
@@ -213,5 +214,11 @@ run_debarcoder <- function(input, output, session, fcb_dfs) {
           ggplot2::facet_grid(.~bc1, scales = "free") +
           ggplot2::scale_color_discrete(name = "BC2 Levels")
     })
+    
+    observeEvent(input$proceed_button, {
+      updateNavbarPage(x, "mainNavbarPage", "tab4")
+    })
+    
+    
     return(dbc2)
 }
