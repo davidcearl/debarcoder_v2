@@ -30,7 +30,7 @@ download_fcs_files <- function(cyto_session, expID, fcsFileIDs,
             updateProgress(detail = lut[lut$id== fcsFileID, 'filename'])
         }
 
-        download_object <- CytobankAPI::fcs_files.download(cyto_session, expID, fcsFileID)
+        download_object <- CytobankAPI::fcs_files.download(cyto_session, expID, fcsFileID, timeout = 180)
         downloadlist<- append(downloadlist, download_object)
         download_object
     }

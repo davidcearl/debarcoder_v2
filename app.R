@@ -60,6 +60,10 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                           value = 'tab3',
                           sidebarLayout(
                             sidebarPanel(
+                              
+                              radioButtons("bctype", "Barcode Format",
+                                           c("2 Dyes" = "2dye",
+                                             "2 Dyes + Uptake Control" = "3dye")),
                               helpText("1. Specifiy the number of levels
                                        of BC1 with the slider"),
                               helpText("2. Specifiy the uncertainty

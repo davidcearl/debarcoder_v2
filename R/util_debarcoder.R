@@ -181,7 +181,7 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
 
   for ( i in bc1table.clean) {
 
-    print(paste("Debarcoding Level:", i))
+    #print(paste("Debarcoding Level:", i))
     ind <- fcb_df[,prevlevel] == i
 
     fcb_df.i <- fcb_df[which(ind), ]
@@ -209,7 +209,7 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
     classif <- unlist(classif)
 
     classif <- levels + 1 - classif
-
+    classif[classif > levels] <- 0          
     fcb_df[which(ind), "bc2"] <- classif
 
 

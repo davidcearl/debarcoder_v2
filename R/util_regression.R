@@ -201,7 +201,7 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
 doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, trans,
                                 val3 = NULL, constrained_flag = 1,
                                 columns = NULL, monodir = NULL, cofactor = NULL) {
-  print(cofactor)
+  #print(cofactor)
   lo <- 1 #log offset
   fsc_limits <- c(min(single_level_bc['FSC-A']), max(single_level_bc['FSC-A']))
   ssc_limits <- c(min(single_level_bc['SSC-A']), max(single_level_bc['SSC-A']))
