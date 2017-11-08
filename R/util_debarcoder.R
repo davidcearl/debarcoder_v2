@@ -22,8 +22,8 @@
 
 #bc_single_level can't be null, change default?
 debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
-                        uccutoff = 0.05, opt = 4, subsample = 10e3,
-                        updateProgress = NULL) {
+                        uccutoff = 0.05, opt = 4, subsample = 10e3, trans = 'arcsinh', 
+                        updateProgress = NULL, cofactor_bc1 = NULL) {
 
   if (is.function(updateProgress)) {
     updateProgress(detail = "Mapping cellular Density")
@@ -34,9 +34,9 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
   if (is.function(updateProgress)) {
     updateProgress(detail = "Performing Morphology Correction")
   }
-
+  
   regression.output <- doRegressContrained(bc_single_level, fcb_df, Loc = area_density$loc, weight = area_density$c,
-                                  opt='logF', columns = c(channel), monodir = c(1,1))
+                                  trans = trans, columns = c(channel), monodir = c(1,1), cofactor = cofactor_bc1)
 
   cor.data <- regression.output[[1]]
 
@@ -47,7 +47,11 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
   #mix_hist_plot <- hist(1)
   if (opt == 4) {
     vec <- log10(fcb_df2[,channel])
-
+  } else if (opt == 'arcsinh') {
+    vec <- asinh(fcb_df2[,channel]/cofactor_bc1)
+  }
+  
+  {
     vecss <- sample(vec, subsample)
     if (is.function(updateProgress)) {
       updateProgress(detail = "Initializing Model")
@@ -118,7 +122,8 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
                      inherit.aes = F, bins = 100, col = "black", fill = NA) +
       ggplot2::geom_area(alpha = 0.5, col = "grey50") +
 
-      ggplot2::scale_x_log10(breaks = major.ticks,
+      ggplot2::scale_x_continuous(trans = logicle_trans(),
+                                  breaks = major.ticks,
                     labels = major.ticks,
                     minor_breaks = minor.ticks,
                     name = channel) +
@@ -155,7 +160,10 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
 }
 
 
-debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05, subsample = 10e3) {
+debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
+                        subsample = 10e3, trans = "arcsinh",
+                        cofactor_bc1 = NULL,
+                        cofactor_bc2 = NULL) {
   print('running db2')
   #previous channel should always be bc1
   prevlevel <- "bc1"
@@ -173,14 +181,18 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05, s
 
   for ( i in bc1table.clean) {
 
-    print(paste("Debarcoding Level:", i))
+    #print(paste("Debarcoding Level:", i))
     ind <- fcb_df[,prevlevel] == i
 
     fcb_df.i <- fcb_df[which(ind), ]
-
-    Y <- log10(fcb_df.i[,channel])
-    X <- log10(fcb_df.i[,prevchannel])
-
+    if (trans == "log10"){
+      Y <- log10(fcb_df.i[,channel])
+      X <- log10(fcb_df.i[,prevchannel])
+    } else if (trans == "arcsinh"){
+      Y <- asinh(fcb_df.i[,channel]/cofactor_bc2)
+      X <- asinh(fcb_df.i[,prevchannel]/cofactor_bc1)
+    }
+    
     resids <- Y - X + median(Y, na.rm = TRUE)
 
 
@@ -197,7 +209,7 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05, s
     classif <- unlist(classif)
 
     classif <- levels + 1 - classif
-
+    classif[classif > levels] <- 0          
     fcb_df[which(ind), "bc2"] <- classif
 
 

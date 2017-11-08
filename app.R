@@ -1,6 +1,10 @@
+source("./R/loadfiles.R")
+
+
 ###############################################################################
-ui <- navbarPage(title = 'DebarcodeR',
-                 tabPanel("1: Select Mode and Import Experiment",
+ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
+                 tabPanel(title = "1: Select Mode and Import Experiment",
+                          id = 'tab1',
                           value = 'tab1',
                           sidebarLayout(
                             sidebarPanel(
@@ -26,7 +30,9 @@ ui <- navbarPage(title = 'DebarcodeR',
                               setup_ui('setup')
                             )
                               )),
-                 tabPanel("2: Select FCB Population", value = 'tab2',
+                 tabPanel(title = "2: Select FCB Population",
+                          id = 'tab2',
+                          value = 'tab2',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("1. Make sure the right files are
@@ -49,9 +55,15 @@ ui <- navbarPage(title = 'DebarcodeR',
                             )
                               )
                               ),
-                 tabPanel("3: Debarcode", value = 'tab3',
+                 tabPanel(title = "3: Debarcode",
+                          id = 'tab3',
+                          value = 'tab3',
                           sidebarLayout(
                             sidebarPanel(
+                              
+                              radioButtons("bctype", "Barcode Format",
+                                           c("2 Dyes" = "2dye",
+                                             "2 Dyes + Uptake Control" = "3dye")),
                               helpText("1. Specifiy the number of levels
                                        of BC1 with the slider"),
                               helpText("2. Specifiy the uncertainty
@@ -72,7 +84,9 @@ ui <- navbarPage(title = 'DebarcodeR',
                             )
                               )
                               ),
-                 tabPanel("4: Well Assignments", value = 'tab4',
+                 tabPanel("4: Well Assignments",
+                          value = 'tab4',
+                          id = 'tab4',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("Please specify the correspondence
@@ -84,7 +98,9 @@ ui <- navbarPage(title = 'DebarcodeR',
                             )
                               )
                  ),
-                 tabPanel("5: Upload to Cytobank", value = 'tab5',
+                 tabPanel("5: Upload to Cytobank",
+                          value = 'tab5',
+                          id = 'tab5',
                           sidebarLayout(
                             sidebarPanel(
                               helpText("1. Choose whether to clone the
@@ -99,7 +115,11 @@ ui <- navbarPage(title = 'DebarcodeR',
                             )
                             )
                           ),
-                 tabPanel("6: Edit Sample Tags", value = "tab6",
+                 tabPanel("6: Edit Sample Tags", value = "
+                          
+                          
+                          
+                          tab6",
                           sidebarLayout(
                             sidebarPanel(
                               helpText('foo')
@@ -112,20 +132,21 @@ ui <- navbarPage(title = 'DebarcodeR',
                  )
 
 server <- function(input, output, session){
-
-  setup <- callModule(setup, 'setup')
-
-  fcb <- callModule(fcb_select, 'fcb_select', setup)
-
-  debarcoded <- callModule(run_debarcoder, 'run_db', fcb)
-
-  callModule(assign_split, 'assign_split', setup, fcb, debarcoded)
-
+  #x=session syntax allows updateNavbarpage to automatically advance to next
+  #tab as approriate
+  setup <- callModule(setup, 'setup', x = session)
+  
+  fcb <- callModule(fcb_select, 'fcb_select', setup, x = session)
+  
+  debarcoded <- callModule(run_debarcoder, 'run_db', fcb, x = session)
+  
+  callModule(assign_split, 'assign_split', setup, fcb, debarcoded, x = session)
+  
   upload_id <- callModule(upload, 'upload', setup)
-
-  sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
-
-  #session$onSessionEnded(stopApp)
+  
+  #sample_tag <- callModule(sample_tag, 'sample_tag', setup, upload_id)
+  
+  session$onSessionEnded(stopApp)
 }
 
 shinyApp(ui, server)

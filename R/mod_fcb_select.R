@@ -14,35 +14,155 @@ compensate_files <- function(comp_matrix, flowframes) {
     return(list(flowCore_comps, orig = flowCore_uncomps))
 }
 
+# define_gates <- function(gates, lut) {
+#     mygates <- vector("list", length = length(unlist(gates$id)))
+#     names(mygates) <- unlist(gates$name)
+# 
+#     for(i in 1:length(mygates)) {
+#         mygates[[i]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
+#         mygates[[i]][["channels"]] <- as.character(lut[match(mygates[[i]][["channels"]],
+#                                                              lut$normalizedShortNameId),"shortName"])
+# 
+#         mygates[[i]][["type"]] <- gates$type[[i]]
+# 
+#         #print(str(mygates))
+#         if(mygates[[i]][["type"]] == "PolygonGate") {
+#             mygates[[i]][["coords"]] <- do.call(rbind,
+#                                                 lapply(
+#                                                     gates$definition[[i]][[1]][["polygon"]][["vertices"]],
+#                                                     as.numeric)
+#             )
+#         }
+#         if(mygates[[i]][["type"]] == "RectangleGate") {
+#             mygates[[i]][["coords"]] <- matrix(
+#                 unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
+#         }
+# 
+#         mygates[[i]][["coords"]]
+#         colnames(mygates[[i]][["coords"]]) <- mygates[[i]][["channels"]]
+#     }
+#     return(mygates)
+# }
+
 define_gates <- function(gates, lut) {
-    mygates <- vector("list", length = length(unlist(gates$id)))
-    names(mygates) <- unlist(gates$name)
-
-    for(i in 1:length(mygates)) {
-        mygates[[i]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
-        mygates[[i]][["channels"]] <- as.character(lut[match(mygates[[i]][["channels"]],
-                                                             lut$normalizedShortNameId),"shortName"])
-
-        mygates[[i]][["type"]] <- gates$type[[i]]
-
-        #print(str(mygates))
-        if(mygates[[i]][["type"]] == "PolygonGate") {
-            mygates[[i]][["coords"]] <- do.call(rbind,
-                                                lapply(
-                                                    gates$definition[[i]][[1]][["polygon"]][["vertices"]],
-                                                    as.numeric)
-            )
-        }
-        if(mygates[[i]][["type"]] == "RectangleGate") {
-            mygates[[i]][["coords"]] <- matrix(
-                unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
-        }
-
-        mygates[[i]][["coords"]]
-        colnames(mygates[[i]][["coords"]]) <- mygates[[i]][["channels"]]
+  #exp_info$exp_gates
+  #gates <- exp_info$exp_gates
+  #lut <- exp_info$exp_lut
+  #gates$name
+  mygates <- vector("list", length =  max(unlist(gates$gateId)))
+  names(mygates)[unlist(gates$gateId)] <- unlist(gates$name)
+  # gates$name[[4]]
+  # i <- 4
+  
+  #mygates[[j]]
+  for(i in 1:length(unlist(gates$gateId))) {
+    j <- gates$gateId[[i]]
+    
+    mygates[[j]][["channels"]] <- c(gates$xNormalizedShortNameId[[i]], gates$yNormalizedShortNameId[[i]])
+    mygates[[j]][["channels"]] <- as.character(lut[match(mygates[[j]][["channels"]],
+                                                         lut$normalizedShortNameId),"shortName"])
+    
+    mygates[[j]][["type"]] <- gates$type[[i]]
+    
+    if(mygates[[j]][["type"]] == "PolygonGate") {
+      mygates[[j]][["coords"]] <- do.call(rbind,
+                                          lapply(
+                                            gates$definition[[i]][[1]][["polygon"]][["vertices"]],
+                                            as.numeric))
+      colnames(mygates[[j]][["coords"]]) <- mygates[[j]][["channels"]]
+    } else if(mygates[[j]][["type"]] == "RectangleGate") {
+      mygates[[j]][["coords"]] <- matrix(
+        unlist(gates[["definition"]][[i]][[1]][["rectangle"]]), ncol = 2, byrow = TRUE)
+      colnames(mygates[[j]][["coords"]]) <- mygates[[j]][["channels"]]
+      
+    } else if(mygates[[j]][["type"]] == "EllipseGate") {
+      #procedure for computing ellipsegate parameters from : https://support.bioconductor.org/p/35360/
+      mydef <- (gates[["definition"]][[i]])[[1]]
+      angle <- mydef$ellipse$angle
+      major <- mydef$ellipse$major/2
+      minor <- mydef$ellipse$minor/2
+      
+      m1 <- cos(angle)^2/(major^2) + (sin(angle)^2)/(minor^2)
+      m2 <- sin(angle)*cos(angle)*(((1/major^2)) - (1/(minor^2)))
+      m3 <- m2
+      m4 <- sin(angle)^2/(major^2) + (cos(angle)^2)/(minor^2)
+      mygates[[j]][["cov_matrix"]] <- solve(matrix(c(m1, m2, m3, m4), nrow = 2))
+      mygates[[j]][["coords"]] <- matrix(unlist(mydef$ellipse$center), ncol = 2)
+      colnames(mygates[[j]][["coords"]]) <- mygates[[j]][["channels"]]
+      
+    } else if(mygates[[j]][["type"]]  == "SplitGate") {
+      mydef <- gates$definition[[i]][[1]]
+      
+      #left
+      ind <- mydef[["split"]][["L"]]
+      names(mygates)[ind] <- paste0(names(mygates)[j],"_","low") #define gate name
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]]<- data.frame(-Inf, mydef[["split"]][["x"]])
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "RangeGate"
+      
+      
+      #right
+      ind <- mydef[["split"]][["R"]]
+      names(mygates)[ind] <- paste0(names(mygates)[j],"_","high") #define gate name
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]]<- data.frame(mydef[["split"]][["x"]], Inf)
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "RangeGate"
+      
+    } else if(mygates[[j]][["type"]]  == "RangeGate") {
+      mydef <- gates$definition[[i]][[1]]
+      mygates[[j]][["coords"]]<- data.frame(mydef$range$x1, mydef$range$x2)
+      colnames(mygates[[j]][["coords"]]) <- mygates[[j]][["channels"]]
+      
+    } else if(mygates[[j]][["type"]]  == "QuadrantGate") {
+      mydef <- gates$definition[[i]][[1]]
+      
+      #UR
+      ind <- mydef$quadrant$UR
+      mygates[[ind]] <- list()
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]] <- data.frame(matrix(c(mydef$quadrant$x, Inf, mydef$quadrant$y, Inf), nrow = 2))
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "QuadrantGate"
+      
+      #UL
+      ind <- mydef$quadrant$UL
+      mygates[[ind]] <- list()
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]] <- data.frame(matrix(c(-Inf, mydef$quadrant$x, mydef$quadrant$y, Inf), nrow = 2))
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "QuadrantGate"
+      
+      #LL
+      ind <- mydef$quadrant$LL
+      mygates[[ind]] <- list()
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]] <- data.frame(matrix(c(-Inf, mydef$quadrant$x, -Inf, mydef$quadrant$y), nrow = 2))
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "QuadrantGate"
+      
+      #LR
+      ind <- mydef$quadrant$LR
+      mygates[[ind]] <- list()
+      mygates[[ind]][["channels"]] <- mygates[[j]][["channels"]]
+      mygates[[ind]][["coords"]] <- data.frame(matrix(c(mydef$quadrant$x, Inf, -Inf, mydef$quadrant$y), nrow = 2))
+      colnames(mygates[[ind]][["coords"]]) <- mygates[[ind]][["channels"]]
+      mygates[[ind]][["type"]] <- "QuadrantGate"
+      
+    }else  {
+      warning(paste(mygates[[j]][["type"]], "are not currently supported!"))
+      break #all gate types are supported at this point, future implementations will also include tailored gates. 
+      
     }
-    return(mygates)
+    #print(str(mygates[[i]]))
+    #mygates[[j]][["coords"]]
+    #print(mygates[[j]][["coords"]])
+    #colnames(mygates[[j]][["coords"]]) <- mygates[[j]][["channels"]]
+  }
+  return(mygates)
 }
+
 ######
 
 #requires gates_transforms.R
@@ -52,49 +172,53 @@ define_gates <- function(gates, lut) {
 #takes ungated flowrame, population, population list, gate list, gate definitions, and lookup table
 #returns gate_defs flowframe for poupulation
 gate_population <- function(flow_frame, population, poplist, gatelist, gate_defs, lut) { #need to pass flow_frame (fcb flowCore file), gatelist (get_gates), population name (string), poplist (get_populations), lut
-
-    ##gate_defs changes, here is refering to gate_defs object
-
-    pop.gates <- unlist(poplist[[match(population, poplist$name), "definition"]][["gates"]]) # gets the sequence of gates (numeric ids) that defines a population
-
-    for(j in pop.gates) { #for gate in pop_gates
-        i<-match(j, unlist(gatelist$gateId)) #get the gate name from numeric id
-        #print(gatelist$name[[i]]) #can delete
-
-        axis <- as.formula(paste0("`",gate_defs[[i]][["channels"]][2],"`", "~" ,"`",gate_defs[[i]][["channels"]][1],"`"))
-
-        channel.ind<- match(gate_defs[[i]][["channels"]],   as.character(lut$shortName))
-        channel.char <- gate_defs[[i]][["channels"]]
-        gate_defs[[i]][["channels"]]
-        lut[channel.ind, "scaleType"]
-        if (any(lut[channel.ind, "scaleType"] == 4)) {
-            ind <- which(lut[channel.ind, "scaleType"] == 4)
-            flowCore::exprs(flow_frame)[,channel.char[ind]] <- asinh(flowCore::exprs(flow_frame)[,channel.char[ind]]/lut[channel.ind[ind], "cofactor"])
-        }
-
-        #can now use rectangle gates!!!
-        if(gate_defs[[i]][["type"]] == "RectangleGate") {
-            gate.i <- flowCore::rectangleGate(gate_defs[[i]][["coords"]])
-            flow_frame <- gatein(flow_frame, gate.i)
-        }
-        else {
-            gate.i <- flowCore::polygonGate(gate_defs[[i]][["coords"]])
-            flow_frame <- gatein(flow_frame, gate.i)
-        }
-
-
-        #plotgate(what = axis, flow_frame, gate.i, ylim = c(-2, 12))
-        #plotgate(what = axis, flow_frame, gate.i)
-
-        if (any(lut[channel.ind, "scaleType"] == 4)) {
-            ind <- which(lut[channel.ind, "scaleType"] == 4)
-            flowCore::exprs(flow_frame)[,channel.char[ind]] <- sinh(flowCore::exprs(flow_frame)[,channel.char[ind]])*lut[channel.ind[ind], "cofactor"]
-        }
-        #print(nrow(exprs(flow_frame)))
+  
+  pop.gates <- unlist(poplist[[match(population, poplist$name), "definition"]][["gates"]]) # gets the sequence of gates (numeric ids) that defines a population
+  for(j in pop.gates) { #for gate in pop_gates
+    i<- j
+    
+    axis <- as.formula(paste0("`",gate_defs[[i]][["channels"]][2],"`", "~" ,"`",gate_defs[[i]][["channels"]][1],"`"))
+    
+    channel.ind<- match(gate_defs[[i]][["channels"]],   as.character(lut$shortName))
+    channel.char <- gate_defs[[i]][["channels"]]
+    
+    if (any(lut[channel.ind, "scaleType"] == 4)) { #transforms arcsinh channels approraitely
+      ind <- which(lut[channel.ind, "scaleType"] == 4)
+      flowCore::exprs(flow_frame)[,channel.char[ind]] <- asinh(flowCore::exprs(flow_frame)[,channel.char[ind]]/lut[channel.ind[ind], "cofactor"])
     }
-    return(flow_frame)
+    
+    if(gate_defs[[i]][["type"]] == "RectangleGate") {
+      gate.i <- flowCore::rectangleGate(gate_defs[[i]][["coords"]])
+      flow_frame <- gatein(flow_frame, gate.i)
+    } else if (gate_defs[[i]][["type"]] == "PolygonGate") {
+      gate.i <- flowCore::polygonGate(gate_defs[[i]][["coords"]])
+      flow_frame <- gatein(flow_frame, gate.i)
+      
+    } else if (gate_defs[[i]][["type"]] == "EllipseGate") {
+      colnames(gate_defs[[i]][["cov_matrix"]]) <- gate_defs[[i]][["channels"]]
+      gate.i<- flowCore::ellipsoidGate(gate_defs[[i]][["cov_matrix"]], mean = as.numeric(gate_defs[[i]][["coords"]]))
+      flow_frame<- gatein(flow_frame, gate.i)
+    }  else if (gate_defs[[i]][["type"]] == "RangeGate") {
+      flow_frame <- flow_frame[
+        flow_frame@exprs[,gate_defs[[i]][["channels"]][1]] > gate_defs[[i]][["coords"]][[1]] & 
+          flow_frame@exprs[,gate_defs[[i]][["channels"]][1]] < gate_defs[[i]][["coords"]][[2]],
+        ]
+    } else if (gate_defs[[i]]["type"] == "QuadrantGate") {
+      flow_frame<- flow_frame[
+        flow_frame@exprs[,gate_defs[[i]][["channels"]][1]] > gate_defs[[i]][["coords"]][[1,1]] & 
+          flow_frame@exprs[,gate_defs[[i]][["channels"]][1]] < gate_defs[[i]][["coords"]][[2,1]] &
+          flow_frame@exprs[,gate_defs[[i]][["channels"]][2]] > gate_defs[[i]][["coords"]][[1,2]] &
+          flow_frame@exprs[,gate_defs[[i]][["channels"]][2]] < gate_defs[[i]][["coords"]][[2,2]]
+        ,]
+    }
+    
+    if (any(lut[channel.ind, "scaleType"] == 4)) { #backtransforms arcsinh channels back to linear scale
+      ind <- which(lut[channel.ind, "scaleType"] == 4)
+      flowCore::exprs(flow_frame)[,channel.char[ind]] <- sinh(flowCore::exprs(flow_frame)[,channel.char[ind]])*lut[channel.ind[ind], "cofactor"]
+    }
+  }
+  return(flow_frame)
 }
-
 #get dataframe from flowFrame
 #removes events that fall below the bc_cutoff
 #returns cleaned dataframe
@@ -142,35 +266,37 @@ fcb_select_ui <- function(id){
             column(width = 4,
                    selectInput(ns("db_bc1_channel"),
                                label = 'BC1 Channel',
-                               c('none')),
-                   selectInput(ns("db_bc1_fcs"),
-                               label = 'BC1 Comp (optional)',
-                               c('none'))
+                               c('none'))#,
+                  # selectInput(ns("db_bc1_fcs"),
+                   #            label = 'BC1 Comp (optional)',
+                    #           c('none'))
             ),
             column(width = 4,
                    selectInput(ns("db_bc2_channel"),
                                label = 'BC2 Channel',
-                               c('none')),
-                   selectInput(ns("db_bc2_fcs"),
-                               label = 'BC2 Comp (optional)',
-                               c('none'))
+                               c('none'))#,
+                   #selectInput(ns("db_bc2_fcs"),
+                    #           label = 'BC2 Comp (optional)',
+                     #          c('none'))
             ),
-            column(width = 3,
-                   selectInput(ns("db_bc_pop"),
-                               label = 'Comp Population',
-                               c('none'))
+            column(width = 3#,
+                   #sel1ectInput(ns("db_bc_pop"),
+                    #           label = 'Comp Population',
+                     #          c('none'))
             )
         ),
         sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
         sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
 
-        actionButton(ns('df_button'), label = 'Done'),
+        actionButton(ns('df_button'), label = 'Apply Gating'),
+        actionButton(ns('proceed_button'), label = 'Proceed'),
         plotOutput(ns('cutoff_plot'))
+
     )
 }
 
 
-fcb_select <- function(input, output, session, setup){
+fcb_select <- function(input, output, session, setup, x){
 
     fcs_flowframes <- reactive(
         setup()[['fcs_flowframes']]
@@ -203,7 +329,7 @@ fcb_select <- function(input, output, session, setup){
         updateSelectInput(session, 'db_bc_pop', choices = pop_ch)
 
         comps <- names(exp_info()[['exp_comps']])
-        updateSelectInput(session, 'db_fcb_comp', choices = comps)
+        updateSelectInput(session, 'db_fcb_comp', choices = c("internal compensation", comps))
     })
 
     #returns the matrix of the selected comp
@@ -213,10 +339,18 @@ fcb_select <- function(input, output, session, setup){
         comp_name <- input$db_fcb_comp
         if(comp_name == 'none'){
             comp_name <- names(exp_info()[['exp_comps']])[1]
+        } else if (comp_name == "internal compensation") { #pulls internal comp
+          comp.matrix <- flowCore::description(fcs_flowframes()[[1]])[["SPILL"]]
+        } else {
+          comp.matrix <- exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']]
         }
-        return(exp_info()[['exp_comps']][[comp_name]][['compensation_matrix']])
+        return(comp.matrix)
     })
-
+    
+    observeEvent(input$proceed_button, {
+      updateNavbarPage(x, "mainNavbarPage", "tab3")
+    })
+    
     fcb_dfs <- eventReactive(input$df_button, {
 
         comp <- comp_to_use()
@@ -226,7 +360,6 @@ fcb_select <- function(input, output, session, setup){
         gate_defs <- define_gates(exp_info()[['exp_gates']],
                                   exp_info()[['exp_lut']])
 
-        print(comped_flowCore_files)
 
         pop_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_fcb_fcs]],
                                                input$db_pop,
@@ -240,7 +373,8 @@ fcb_select <- function(input, output, session, setup){
                                  bc1_cutoff = input$bc1_sig_cutoff,
                                  bc2_cutoff  = input$bc2_sig_cutoff)
         uncompsubset <- uncomp[[input$db_fcb_fcs]]
-        if(input$db_bc1_fcs != 'none') {
+        #if(input$db_bc1_fcs != 'none') {
+        if(FALSE) {
             bc1_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_bc1_fcs]],
                                                    input$db_bc_pop,
                                                    exp_info()[['exp_pops']],
@@ -259,7 +393,9 @@ fcb_select <- function(input, output, session, setup){
             bc1_df[['df']] <- NULL
         }
 
-        if(input$db_bc2_fcs != "none") {
+        #if(input$db_bc2_fcs != "none") { #this was for when singly stain controls were included, may eventually bring it back 
+        if(FALSE) {
+            
             bc2_gated_flowFrame <- gate_population(comped_flowCore_files[[input$db_bc2_fcs]],
                                                    input$db_bc_pop,
                                                    exp_info()[['exp_pops']],
@@ -347,6 +483,7 @@ fcb_select <- function(input, output, session, setup){
           ggplot2::geom_hline(yintercept = bc2cut, col = "blue", size = 1) +
           ggplot2::ggtitle("Removing non-barcoded cells")
     }, width = 600, height = 600)
+    
 
 
     return(fcb_dfs)

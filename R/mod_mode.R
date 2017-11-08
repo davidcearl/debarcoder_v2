@@ -30,7 +30,7 @@ download_fcs_files <- function(cyto_session, expID, fcsFileIDs,
             updateProgress(detail = lut[lut$id== fcsFileID, 'filename'])
         }
 
-        download_object <- CytobankAPI::fcs_files.download(cyto_session, expID, fcsFileID)
+        download_object <- CytobankAPI::fcs_files.download(cyto_session, expID, fcsFileID, timeout = 180)
         downloadlist<- append(downloadlist, download_object)
         download_object
     }
@@ -123,7 +123,7 @@ api_mode_ui <- function(id){
 
 ## server function
 
-api_mode <- function(input, output, session){
+api_mode <- function(input, output, session, x){
     login_info <- reactive({
         #will only run authenticate if user name and token are entered
         validate(c(
@@ -181,17 +181,27 @@ api_mode <- function(input, output, session){
     exp_table <- reactive({
         connection_status <- check_if_connected_reactive()[['bool']]
         if(connection_status){
-            withProgress(message = 'fetching experiments from cytobank',
-                         detail = 'This may take a while...',
-                         value = 0,
-                         expr = {
-                             exps <- tryCatch({
-                               CytobankAPI::experiments.list(cyto_session())[, c('id', 'experimentName')]
-                             })
-                             setProgress(value = 1,
-                                         message = 'Done!')
-                             return(exps)
-                         })
+          progress <- shiny::Progress$new()
+          progress$set(message = "Fetching experiments from cytobank",
+                       detail = ,
+                       value = 0.2)
+          on.exit(progress$close())
+          n <- 2
+          updateProgress <- function(detail = NULL) {
+            progress$inc(amount = 1/n, detail = detail)
+          }
+            # withProgress(message = 'fetching experiments from cytobank',
+            #              detail = 'This may take a while...',
+            #              value = 0,
+            #              expr = {
+         exps <- tryCatch({
+           updateProgress(detail = "This may take a while...")
+           CytobankAPI::experiments.list(cyto_session())[, c('id', 'experimentName')]
+         })
+         updateProgress(detail = "Done!")
+         
+         return(exps)
+                         # })
         }
         else{
             return(data.frame())
@@ -272,13 +282,14 @@ api_mode <- function(input, output, session){
                                    }
     )
 
-    exp_info <- callModule(exp_info, 'exp_info', cyto_session)
+    exp_info <- callModule(exp_info, 'exp_info', cyto_session, x)
 
     api_exp <- reactive({
         return(list('mode' = 'api',
                     'fcs_flowframes' = fcs_flowframes(),
                     'exp_info' = exp_info(),
-                    'cyto_session' = cyto_session()))
+                    'cyto_session' = cyto_session(), 
+                    'exp_table' = exp_table()))
     })
 
     return(api_exp)
@@ -297,12 +308,12 @@ demo_mode_ui <- function(id){
     )
 }
 
-demo_mode <- function(input, output, session){
+demo_mode <- function(input, output, session, x){
     demo_exp <- eventReactive(input$submit_demo, {
         load('./data/demo_data.Rdata')
+        updateNavbarPage(x, "mainNavbarPage", "tab2")
         return(demo_data)
     })
-
     return(demo_exp)
 }
 
