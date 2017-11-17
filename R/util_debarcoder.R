@@ -45,9 +45,14 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
 
   #prob better way to handle passing plot
   #mix_hist_plot <- hist(1)
-  if (opt == 4) {
+  print(trans)
+  if (trans == "log10") {
+    print(trans)
+    print(cofactor_bc1)
+    print("opt was 4")
     vec <- log10(fcb_df2[,channel])
-  } else if (opt == 'arcsinh') {
+  } else if (trans == 'arcsinh') {
+    print("opt was asinh")
     vec <- asinh(fcb_df2[,channel]/cofactor_bc1)
   }
   
@@ -56,7 +61,7 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
     if (is.function(updateProgress)) {
       updateProgress(detail = "Initializing Model")
     }
-
+    summary(vecss)
     mod.int <- classInt::classIntervals(vecss, levels, style = "fisher")
     classif <- sapply(vecss, function(x) pracma::findintervals(x, mod.int$brks))
     classif <- levels + 1 - classif
@@ -101,6 +106,7 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
       model[,as.character(i)] <- sn::dsn(mysec, dp = as.numeric(Snorm.df[i,]))
 
     }
+    
     model.scaled <- apply(model[,-1], 1, function(vec) { vec * Snorm.analysis$pii})
     model.scaled<- cbind(x = model[,1], as.data.frame(t(as.matrix(model.scaled))))
     num.colnames <- as.numeric(colnames(model.scaled[-1]))
@@ -109,29 +115,48 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
     colnames(model.scaled)[-1] <- match(num.colnames, colnames.order)
 
     melt.model.scaled <- reshape2::melt(model.scaled, id.vars = "x")
-    melt.model.scaled$x10 <- 10^melt.model.scaled$x
+  
 
     vec.df <- data.frame(value = vec)
-    vec10.df <- data.frame(value = 10^vec)
-
+    if(trans == "log10"){
+      vec.bt.df <- data.frame(value = 10^vec) #bt = back transform
+      melt.model.scaled$x10 <- 10^melt.model.scaled$x
+      mytrans <- "log10"
+    } else if (trans =="arcsinh"){
+      vec.bt.df <- data.frame(value = sinh(vec)*cofactor_bc1)
+      melt.model.scaled$x10 <- sinh(melt.model.scaled$x)*cofactor_bc1
+      mytrans <- asinh_trans(cofactor_bc1)
+    }
     melt.model.scaled$variable<- factor(melt.model.scaled$variable,
                                         as.character(1:length(melt.model.scaled$variable)))
+    
+    print(colnames(melt.model.scaled))
+    
+    print(colnames(vec.bt.df))
+    
+    print(summary(melt.model.scaled))
+    print(summary(vec.bt.df))
+    
     #(melt.model.scaled$variable)
-    mix.model.plot <- ggplot2::ggplot(melt.model.scaled, ggplot2::aes(x = x10, y = value, fill = variable)) +
-      ggplot2::geom_histogram(data = vec10.df, ggplot2::aes(x = value, y = ..density..),
+    
+  
+    mix.model.plot <- ggplot2::ggplot(melt.model.scaled,
+                                      ggplot2::aes_string(x = "x10",
+                                                          y = "value",
+                                                          fill = "variable")) +
+      ggplot2::geom_histogram(data = vec.bt.df, ggplot2::aes(x = value, y = ..density..),
                      inherit.aes = F, bins = 100, col = "black", fill = NA) +
       ggplot2::geom_area(alpha = 0.5, col = "grey50") +
-
-      ggplot2::scale_x_continuous(trans = logicle_trans(),
+      ggplot2::scale_x_continuous(trans = mytrans,
                                   breaks = major.ticks,
                     labels = major.ticks,
                     minor_breaks = minor.ticks,
                     name = channel) +
-      ggplot2::coord_cartesian(xlim= quantile(vec10.df$value, c(0.0005,0.9995))) +
+      ggplot2::coord_cartesian(xlim= quantile(vec.bt.df$value, c(0.0005,0.9995))) +
       ggplot2::ylab("Density") +
       ggplot2::scale_fill_discrete(name = "Population") +
       ggplot2::theme_classic()
-
+    
     classif<- apply((probs.scaled.norm), 1, which.max)
     classif.uc <- apply(probs.scaled.norm, 1, max)
     classif <- match(classif, rev(order(Snorm.analysis$mu)))
