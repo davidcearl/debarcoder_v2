@@ -213,14 +213,16 @@ layouts <- eventReactive(input$check_layout, {
     print(paste("bc1_levels", bc1_levels))
     print(paste("bc2_levels", bc2_levels))
     
-    
+    #grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, "Blues"))(4)
+    mypalette <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, "Blues"))(bc2_levels)
     myplot <- ggplot2::ggplot(layout_df, ggplot2::aes(x = col, y = row)) + 
       ggplot2::geom_tile(ggplot2::aes(fill = as.factor(-bc2)), col = "grey50") + 
       ggplot2::scale_x_continuous(breaks = col1:(col1+ncol-1), position = "top", expand = c(0,0)) + 
       ggplot2::scale_y_reverse(breaks = row1:(row1+nrow-1), labels = LETTERS[row1:(row1+nrow-1)], expand = c(0,0)) + 
-      ggplot2::scale_fill_brewer(type = "seq", palette = "Blues", guide = FALSE) + 
+      ggplot2::scale_fill_manual(values = mypalette, guide = FALSE) + 
       ggplot2::geom_text(ggplot2::aes(label = bc2)) + 
       ggplot2::theme_classic()
+    ?ggplot2::scale_fill_manual()
     return(myplot)
   })
     
