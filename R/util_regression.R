@@ -77,8 +77,8 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
     tmin <- optimize(ft, c(0,max(PP)))$minimum
 
     ZZ= matrix(nrow=sum(PP>tmin), ncol=4)
-    ZZ[,1] <- XX[PP>tmin]
-    ZZ[,2] <- YY[PP>tmin]
+    ZZ[,1] <- as.numeric(XX[PP>tmin])
+    ZZ[,2] <- as.numeric(YY[PP>tmin])
     ZZ[,3] <- ZZ[,1]*ZZ[,2]
     ZZ[,4] <- OFFSET
 
