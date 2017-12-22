@@ -18,61 +18,76 @@
 #opt3: depreciated
 #opt4: fitting skew.normal distrubtion, seems to work best at the moment
 #opt5: fitting skewt distrubtion, may be better than skew.normal but more parameters to fit so it takes longer
+
 ###############################################################################
 
 #bc_single_level can't be null, change default?
 debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
-                        uccutoff = 0.05, opt = 4, subsample = 10e3, trans = 'arcsinh', 
-                        updateProgress = NULL, cofactor_bc1 = NULL) {
-
-  if (is.function(updateProgress)) {
-    updateProgress(detail = "Mapping cellular Density")
-  }
-
-  area_density <- selectDenseScatterArea(bc_single_level, subsample = subsample)
-
-  if (is.function(updateProgress)) {
-    updateProgress(detail = "Performing Morphology Correction")
-  }
+                        uccutoff = 0.05, dist = "Skew.normal", subsample = 10e3, trans = 'arcsinh', 
+                        updateProgress = NULL,
+                        cofactor_bc1 = NULL, cofactor_uptake = NULL,
+                        uptakecx = NULL,
+                        likelihoodcut = 1) {
+  print(nrow(fcb_df))
+  if(is.null(uptakecx)) {
+    print("no uptake control")
+    if (is.function(updateProgress)) {
+      updateProgress(detail = "Mapping cellular Density")
+    }
   
-  regression.output <- doRegressContrained(bc_single_level, fcb_df, Loc = area_density$loc, weight = area_density$c,
-                                  trans = trans, columns = c(channel), monodir = c(1,1), cofactor = cofactor_bc1)
-
-  cor.data <- regression.output[[1]]
-
-  fcb_df2 <- fcb_df
-  fcb_df2[, channel]<- cor.data[, channel]
-
+    area_density <- selectDenseScatterArea(bc_single_level, subsample = subsample)
+  
+    if (is.function(updateProgress)) {
+      updateProgress(detail = "Performing Morphology Correction")
+    }
+    
+    regression.output <- doRegressContrained(bc_single_level, fcb_df, Loc = area_density$loc, weight = area_density$c,
+                                    trans = trans, columns = c(channel), monodir = c(1,1), cofactor = cofactor_bc1)
+  
+    cor.data <- regression.output[[1]]
+    fcb_df2 <- fcb_df
+    fcb_df2[, channel]<- cor.data[, channel]
+    if (trans == "log10") {
+      vec <- log10(fcb_df2[,channel])
+    } else if (trans == 'arcsinh') {
+      vec <- asinh(fcb_df2[,channel]/cofactor_bc1)
+    }
+    
+  } else { #uptake control mode
+    print("yes uptake control")
+    if (trans == "log10"){
+      Y <- log10(fcb_df[,channel])
+      X <- log10(fcb_df[,uptake_chanel])
+    } else if (trans == "arcsinh"){
+      Y <- asinh(fcb_df[,channel]/cofactor_bc1)
+      X <- asinh(fcb_df[,uptake_channel]/cofactor_uptake)
+    }
+    vec <- Y - X + median(Y, na.rm = TRUE)
+    fcb_df2 <- fcb_df
+    fcb_df2[, channel]<- vec
+  }
   #prob better way to handle passing plot
-  #mix_hist_plot <- hist(1)
-  print(trans)
-  if (trans == "log10") {
-    print(trans)
-    print(cofactor_bc1)
-    print("opt was 4")
-    vec <- log10(fcb_df2[,channel])
-  } else if (trans == 'arcsinh') {
-    print("opt was asinh")
-    vec <- asinh(fcb_df2[,channel]/cofactor_bc1)
-  }
-  
+
+
   {
-    vecss <- sample(vec, subsample)
+    vecss <- sample(vec, subsample, replace = TRUE)
     if (is.function(updateProgress)) {
       updateProgress(detail = "Initializing Model")
     }
     summary(vecss)
-    mod.int <- classInt::classIntervals(vecss, levels, style = "fisher")
-    classif <- sapply(vecss, function(x) pracma::findintervals(x, mod.int$brks))
-    classif <- levels + 1 - classif
-    mu.i <- as.numeric(unlist(lapply(split(vecss, classif), median))[-1])
+    if (levels > 1) {
+      mod.int <- classInt::classIntervals(vecss, levels, style = "fisher")
+      classif <- sapply(vecss, function(x) pracma::findintervals(x, mod.int$brks))
+      classif <- levels + 1 - classif
+      mu.i <- as.numeric(unlist(lapply(split(vecss, classif), median))[-1])
+    }
     if (is.function(updateProgress)) {
       updateProgress(detail = "Optimizing Mixture Model")
     }
 
 
     Snorm.analysis <- mixsmsn::smsn.mix(vecss, nu = 3, g = levels, criteria = TRUE,
-                               get.init = TRUE, group = TRUE, family = "Skew.normal", calc.im = FALSE, obs.prob = TRUE,
+                               get.init = TRUE, group = TRUE, family = dist, calc.im = FALSE, obs.prob = TRUE,
                                kmeans.param = list(iter.max = 20, n.start = 10, algorithm = "Hartigan-Wong"))
 
 
@@ -82,9 +97,10 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
 
     Snorm.df <- data.frame(loc, scale, shape)
     probs <- data.frame(x = vec)
-    for (i in (1:nrow(Snorm.df))){
+    for (i in (1:nrow(Snorm.df))){ #should probably just use the observed probs in the Snorm.analysis output
       probs[,as.character(i)] <- sn::dsn(vec, dp = as.numeric(Snorm.df[i,]))
     }
+    
     probs.scaled <- apply(probs[,-1], 1, function(vec) { vec * Snorm.analysis$pii})
 
     probs.scaled.df <- as.data.frame(cbind(x = vec, t(probs.scaled)))
@@ -99,15 +115,38 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
     if (is.function(updateProgress)) {
       updateProgress(detail = "Generating Plots")
     }
-
-    mysec <- seq(from = 0, to = 5, by = 0.01)
+    
+    mysec <- seq(from = min(round(vec,2)), to = max(round(vec,2)), by = 0.01)
     model <- data.frame(x = mysec)
     for (i in (1:nrow(Snorm.df))){
       model[,as.character(i)] <- sn::dsn(mysec, dp = as.numeric(Snorm.df[i,]))
 
     }
-    
+    # str(model)
+    # 
+    # model.scaled.2 <- sweep(model.scaled[-1], 1, apply(model.scaled[-1], 1, sum), FUN = "/")
+    # model.scaled.2<-(cbind(model.scaled[1], model.scaled.2))
+    # ?sweep
+    # 
+    # ggplot(reshape2::melt(model.scaled.2, id.vars = "x"), aes(x = x, y = value, fill = variable)) +
+    #   geom_area(alpha = 0.9) + 
+    #   geom_histogram(data = data.frame(x = vec), aes(x=x, y = ..density..),
+    #                  inherit.aes = F, col = "black", fill = NA, bins =100) + 
+    #   geom_hline(yintercept = 0.95, size = 1, linetype = 2) + 
+    #   geom_hline(yintercept = 0.05, size = 1, linetype = 2) +
+    #   scale_x_continuous(expand = c(0,0)) +
+    #   scale_y_continuous(expand = c(0,0))
+    # 
+    # ggplot(model.scaled, aes(x= x, y = `3`)) + 
+    #   geom_area(col = "black", fill = NA, size = 1) + 
+    #   geom_hline(yintercept = max(model.scaled$`3`)/8, linetype = 2, col = "blue")
+    # 
+    # 
+    # # write.csv(model, "model.csv")
+    # write.csv(Snorm.analysis$pii, "snormpii.csv")
+    # write.csv(vec, "vec.csv")
     model.scaled <- apply(model[,-1], 1, function(vec) { vec * Snorm.analysis$pii})
+    #model.scaled <- model.scaled/max(model.scaled)
     model.scaled<- cbind(x = model[,1], as.data.frame(t(as.matrix(model.scaled))))
     num.colnames <- as.numeric(colnames(model.scaled[-1]))
     colnames.order <- rev(order(Snorm.df$loc))
@@ -130,19 +169,24 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
     melt.model.scaled$variable<- factor(melt.model.scaled$variable,
                                         as.character(1:length(melt.model.scaled$variable)))
     
-    print(colnames(melt.model.scaled))
+    #this block of code rescales the density plots to match the histogram
+    #purely asthetic
+    preplot <- ggplot2::ggplot(vec.bt.df, ggplot2::aes(x = value, y = ..density..)) + 
+      ggplot2::stat_bin(bins = 100) + 
+      ggplot2::scale_x_continuous(trans = mytrans,
+                                  breaks = major.ticks,
+                                  labels = major.ticks,
+                                  minor_breaks = minor.ticks) + 
+      ggplot2::coord_cartesian(xlim= quantile(vec.bt.df$value, c(0.0005,0.9995)))
     
-    print(colnames(vec.bt.df))
+    preplot.build <- ggplot2::ggplot_build(preplot)
+    melt.model.scaled$value_rescaled <- melt.model.scaled$value/
+      max(melt.model.scaled$value)*
+      max(preplot.build$data[[1]][,"y"]) 
     
-    print(summary(melt.model.scaled))
-    print(summary(vec.bt.df))
-    
-    #(melt.model.scaled$variable)
-    
-  
     mix.model.plot <- ggplot2::ggplot(melt.model.scaled,
                                       ggplot2::aes_string(x = "x10",
-                                                          y = "value",
+                                                          y = "value_rescaled",
                                                           fill = "variable")) +
       ggplot2::geom_histogram(data = vec.bt.df, ggplot2::aes(x = value, y = ..density..),
                      inherit.aes = F, bins = 100, col = "black", fill = NA) +
@@ -157,20 +201,39 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
       ggplot2::scale_fill_discrete(name = "Population") +
       ggplot2::theme_classic()
     
+    
+    
+    
+    
+    ###eliminating ambigious cells based on probability of belonging to more than one population
     classif<- apply((probs.scaled.norm), 1, which.max)
     classif.uc <- apply(probs.scaled.norm, 1, max)
     classif <- match(classif, rev(order(Snorm.analysis$mu)))
     classif[classif.uc < (1- uccutoff)] <- 0 #
+    
+    
+    ##eliminating ambigious cells based on low likihood of belonging to parent population
+    colMax <- apply(probs.scaled.df[-1], 2, max)
+    probs.rescale.col <- sweep(probs.scaled.df[-1], 2, colMax, FUN="/")
+    
+    likely <- apply(probs.rescale.col, 2, function(vec) {vec > 1/likelihoodcut})
 
+    #print(str(likely))
+    #print(str(classif))
+    #print(str(apply(likely, 1, sum)))
+    classif[as.numeric(apply(likely, 1, sum)) == 0] <- 0
+    
+    ###
     fcb_df$bc1 <-  classif
-
+    ###
     #don't need to return classif
     debarcoded_data <- list('df' = fcb_df,
                             "df2" = fcb_df2,
                             "channel" = channel,
                             'snorm' = Snorm.analysis,
-                            "plot" = mix.model.plot,
-                            'regressionmodel' = regression.output[["coefs"]])
+                            "plot" = mix.model.plot#,
+                            ####'regressionmodel' = regression.output[["coefs"]]
+                            )
 
     return(debarcoded_data)
 
@@ -188,7 +251,8 @@ debarcode_1 <- function(fcb_df, bc_single_level = NULL, channel, levels,
 debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
                         subsample = 10e3, trans = "arcsinh",
                         cofactor_bc1 = NULL,
-                        cofactor_bc2 = NULL) {
+                        cofactor_bc2 = NULL, 
+                        likelihoodcut = NULL) {
   print('running db2')
   #previous channel should always be bc1
   prevlevel <- "bc1"
@@ -201,7 +265,7 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
   #if level = 1, exit function assign all bc2 to 1 (for single level barcodes)
   if (levels == 1) {
     fcb_df["bc2"] <- 1
-    return(fcb_df)
+    return(fcb_df) #exits the loop
   }
 
   for ( i in bc1table.clean) {
@@ -235,9 +299,36 @@ debarcode.2 <- function(fcb_df, prevchannel, channel, levels, uccutoff = 0.05,
 
     classif <- levels + 1 - classif
     classif[classif > levels] <- 0          
+
+
+    #calculate the empircal probability for each cell belonging to each 
+    #population based on the histogram
+    
+    resids.split <- split(resids, classif)
+    
+    hist.probs <- list()
+    for (i in as.character(1:levels)){
+      myhist <- hist(resids.split[[i]],100)
+      binprobs <- myhist$counts/sum(myhist$counts)
+      hist.probs.i<- rep(0, times = length(resids))
+      bin.assingments <- findInterval(resids, myhist$breaks)
+      hist.probs.i[which(bin.assingments != 0)] <- binprobs[bin.assingments]
+      hist.probs.i[which(is.na(hist.probs.i))] <- 0
+      hist.probs[[i]] <- hist.probs.i
+    }
+    hist.probs.m <- do.call(cbind, hist.probs)
+    
+    colMax <- apply(hist.probs.m, 2, max)
+    probs.rescale.col <- sweep(hist.probs.m, 2, colMax, FUN="/")
+    #print(summary(probs.rescale.col))
+    likely <- apply(probs.rescale.col, 2, function(resids) {resids > 1/likelihoodcut})
+    
+    classif[as.numeric(apply(likely, 1, sum)) == 0] <- 0
+    classif[as.numeric(apply(likely, 1, sum)) == 2] <- 0
+    
     fcb_df[which(ind), "bc2"] <- classif
-
-
+    
+    
   }
   return(fcb_df)
 }

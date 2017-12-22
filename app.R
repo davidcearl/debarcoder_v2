@@ -1,6 +1,5 @@
 source("./R/loadfiles.R")
 
-
 ###############################################################################
 ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                  tabPanel(title = "1: Select Mode and Import Experiment",
@@ -63,7 +62,8 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                               
                               radioButtons("bctype", "Barcode Format",
                                            c("2 Dyes" = "2dye",
-                                             "2 Dyes + Uptake Control" = "3dye")),
+                                             "2 Dyes + Uptake Control" = "3dye"), 
+                                           inline = TRUE),
                               helpText("1. Specifiy the number of levels
                                        of BC1 with the slider"),
                               helpText("2. Specifiy the uncertainty
@@ -77,10 +77,12 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                                        run. If the output plots look good
                                        scroll down to BC2 debarcoder.
                                        Otherwise you can adjust the
-                                       options and rerun")
+                                       options and rerun"),
+                              verbatimTextOutput('mytext')
                               ),
                             mainPanel(
-                              run_debarcoder_ui("run_db")
+                              debarcode_select_ui('debarcode_select')
+                              #run_debarcoder_ui("run_db")
                             )
                               )
                               ),
@@ -136,9 +138,12 @@ server <- function(input, output, session){
   #tab as approriate
   setup <- callModule(setup, 'setup', x = session)
   
+  
   fcb <- callModule(fcb_select, 'fcb_select', setup, x = session)
   
-  debarcoded <- callModule(run_debarcoder, 'run_db', fcb, x = session)
+  #debarcoded <- callModule(run_debarcoder, 'run_db', fcb, x = session)
+  debarcoded <- callModule(debarcode_select, 'debarcode_select',
+                           fcb, reactive(input$bctype), x = session)
   
   callModule(assign_split, 'assign_split', setup, fcb, debarcoded, x = session)
   

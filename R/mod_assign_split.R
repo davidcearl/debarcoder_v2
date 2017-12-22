@@ -64,15 +64,16 @@ clean_ff <- function(flowframe) {
 }
 
 split_and_write_fcs <- function(well_assigned_df, gated_flowFrame, comp_matrix, eID,
-                                updateProgress = NULL, origin_flowFrame = NULL){
+                                updateProgress = NULL, origin_flowFrame = NULL, prefix = "well"){
     dir.create(paste0(eID, "/debarcoded/"), recursive = TRUE)
 
     fcscolnames <- colnames(well_assigned_df)[1:(ncol(well_assigned_df)-3)]
     valid.wells <-unique(well_assigned_df$well)[!grepl("NA", unique(well_assigned_df$well))]
     valid.wells<- valid.wells[unlist(lapply(lapply(valid.wells, length), function(x) x > 0))] #removes empty wells. 
     #print(str(valid.wells))
+    #print()
     for (well_number in valid.wells){
-        updateProgress(detail = paste0("well_", well_number, ".fcs"))
+        updateProgress(detail = paste0(prefix, "_", well_number, ".fcs"))
         pop <- well_assigned_df[which(well_assigned_df$well==well_number), colnames(flowCore::exprs(gated_flowFrame))]
 
         pop <- as.matrix(pop)
@@ -87,7 +88,14 @@ split_and_write_fcs <- function(well_assigned_df, gated_flowFrame, comp_matrix, 
         flowCore::parameters(pop_ff.uncomp) <- flowCore::parameters(gated_flowFrame)
         pop_ff.uncomp <- clean_ff(pop_ff.uncomp)
 
-        suppressWarnings(flowCore::write.FCS(pop_ff.uncomp, paste0(eID,"/", "/debarcoded/well_",well_number,".fcs")))
+        suppressWarnings(flowCore::write.FCS(pop_ff.uncomp,
+                                             paste0(eID,
+                                                    "/",
+                                                    "/debarcoded/",
+                                                    prefix,
+                                                    "_",
+                                                    well_number,
+                                                    ".fcs")))
     }
 }
 
@@ -204,21 +212,22 @@ layouts <- eventReactive(input$check_layout, {
     bc1_row <- bc1_row()
     bc1_levels <- debarcoded()[["modulelog"]][["bc1"]][["bc1levels"]]
     bc2_levels <- debarcoded()[["modulelog"]][["bc2"]][["bc2levels"]]
-    print(paste("layout_df", str(layout_df)))
-    print(paste("row1", row1))
-    print(paste("col1", col1))
-    print(paste("nrow", nrow))
-    print(paste("ncol", ncol))
-    print(paste("bc1_row", bc1_row))
-    print(paste("bc1_levels", bc1_levels))
-    print(paste("bc2_levels", bc2_levels))
+    # print(paste("layout_df", str(layout_df)))
+    # print(paste("row1", row1))
+    # print(paste("col1", col1))
+    # print(paste("nrow", nrow))
+    # print(paste("ncol", ncol))
+    # print(paste("bc1_row", bc1_row))
+    # print(paste("bc1_levels", bc1_levels))
+    # print(paste("bc2_levels", bc2_levels))
     
     
+    mypalette <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, "Blues"))(bc2_levels)
     myplot <- ggplot2::ggplot(layout_df, ggplot2::aes(x = col, y = row)) + 
       ggplot2::geom_tile(ggplot2::aes(fill = as.factor(-bc2)), col = "grey50") + 
       ggplot2::scale_x_continuous(breaks = col1:(col1+ncol-1), position = "top", expand = c(0,0)) + 
       ggplot2::scale_y_reverse(breaks = row1:(row1+nrow-1), labels = LETTERS[row1:(row1+nrow-1)], expand = c(0,0)) + 
-      ggplot2::scale_fill_brewer(type = "seq", palette = "Blues", guide = FALSE) + 
+      ggplot2::scale_fill_manual(values = mypalette, guide = FALSE) + 
       ggplot2::geom_text(ggplot2::aes(label = bc2)) + 
       ggplot2::theme_classic()
     return(myplot)
@@ -237,13 +246,16 @@ layouts <- eventReactive(input$check_layout, {
 
 
     observeEvent(input$split_fcs, {
+        fcsprefix <-fcb()[[2]][["db_fcb_fcs"]]
+        fcsprefix<- gsub(" ", "_", fcsprefix)
+        
         layout.m <- layouts()[["layout_bc_well.m"]]
         well_assigned_df <- debarcoded()[[1]]
-        print(layout.m)
-        print(head(well_assigned_df$bc1))
-        print(head(well_assigned_df$bc2))
-        print(unique(well_assigned_df$bc1))
-        print(unique(well_assigned_df$bc2))
+        #print(layout.m)
+        #print(head(well_assigned_df$bc1))
+        #print(head(well_assigned_df$bc2))
+        #print(unique(well_assigned_df$bc1))
+        #print(unique(well_assigned_df$bc2))
         
         well_assigned_df$well <- mapply(function(x, y) layout.m[x, y], well_assigned_df$bc1, well_assigned_df$bc2)
         well_assigned_df[well_assigned_df$bc2 == 0, "well"] <- "NA"
@@ -262,7 +274,7 @@ layouts <- eventReactive(input$check_layout, {
         }
 
 
-        split_and_write_fcs(well_assigned_df, orig.flow.frame, comp, exp_id, updateProgress = updateProgress)
+        split_and_write_fcs(well_assigned_df, orig.flow.frame, comp, exp_id, prefix = fcsprefix, updateProgress = updateProgress)
 
     })
 

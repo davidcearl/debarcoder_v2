@@ -1,3 +1,5 @@
+
+
 ## Selecting Densest Area
 #----------------------------------------
 selectDenseScatterArea <- function (data, fsc = 'FSC-A', ssc = 'SSC-A',
@@ -128,16 +130,16 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
     }
 
     XX1 <- matrix(nrow = noc, ncol = 3)
-    XX1[,1] <- Q[,1]
-    XX1[,2] <- Q[,2]
+    XX1[,1] <- as.numeric(Q[,1])
+    XX1[,2] <- as.numeric(Q[,2])
     XX1[,3] <- XX1[,1]*XX1[,2]
     A1 <- matrix(nrow=noc, ncol = ncol(rm))
     for (m in 1:ncol(rm)) {
         A1[,m] <- XX1[,rm[1,m]]^rm[2,m]
     }
     XX2 <- matrix(nrow = noc, ncol = 3)
-    XX2[,1] <- Q[,3]
-    XX2[,2] <- Q[,4]
+    XX2[,1] <- as.numeric(Q[,3])
+    XX2[,2] <- as.numeric(Q[,4])
     XX2[,3] <- XX2[,1]*XX2[,2]
     A2 <- matrix(nrow=noc, ncol = ncol(rm))
     for (m in 1:ncol(rm)) {
@@ -186,7 +188,20 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
         b <- matrix(0, nrow=noc, ncol=1)
     }
 
-    #constrained regression analysis
+    # #constrained regression analysis
+    # if(FALSE) {
+    #   ## This seems silly, but prcma is dependent on quadprog, 
+    #   ## but shiny wasn't recognizing this dependency and won't install
+    #   ## the package on the shinyapps.io server otherwise. 
+    #   ## This block of code shouldn't run, but in case it does,
+    #   ## this is just the example code from ?quadprog::solve.QP
+    # 
+    # }
+    
+
+    
+    
+    
     NB <- numeric(length = length(Bx))
     Bc <- pracma::lsqlincon(cbind(X, 1),Y,cbind(A,0),b)
     NOFFSET <- Bc[9]
@@ -196,8 +211,7 @@ constrained_regression <- function(X, Y, fsc_limits, ssc_limits, val3, D,
     return(list('NB' = NB, 'Bc' = Bc, 'NOFFSET' = NOFFSET))
 }
 
-###############################################################################
-
+###############################################################################re
 doRegressContrained <- function(single_level_bc, fcb_df = NULL, Loc, weight, trans,
                                 val3 = NULL, constrained_flag = 1,
                                 columns = NULL, monodir = NULL, cofactor = NULL) {

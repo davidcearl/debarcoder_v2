@@ -79,7 +79,7 @@ downloaded_fcs_files_to_flowSet <- function(){
         flowCore_files <- c()
         f_names <- c()
         #is this matching pattern is too broad?
-        for(fcs_file in list.files(pattern = '*.fcs$', recursive = T)){
+        for(fcs_file in list.files(pattern = '*.fcs$|*.FCS$', recursive = T)){
             flowCore_file <- flowCore::read.FCS(file.path('.', fcs_file))
             flowCore_files <- c(flowCore_files, flowCore_file)
             f_names <- c(f_names,
@@ -196,10 +196,9 @@ api_mode <- function(input, output, session, x){
             #              expr = {
          exps <- tryCatch({
            updateProgress(detail = "This may take a while...")
-           CytobankAPI::experiments.list(cyto_session())[, c('id', 'experimentName')]
+           CytobankAPI::experiments.list(cyto_session(), timeout = 60)[, c('id', 'experimentName')]
          })
          updateProgress(detail = "Done!")
-         
          return(exps)
                          # })
         }

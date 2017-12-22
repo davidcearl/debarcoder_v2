@@ -285,8 +285,8 @@ fcb_select_ui <- function(id){
                      #          c('none'))
             )
         ),
-        sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
-        sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Signal Cutoff', min = -500, max = 2000, value = 100, step = 50),
+        sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Threshold', min = -500, max = 2000, value = 100, step = 50),
+        sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Threshold', min = -500, max = 2000, value = 100, step = 50),
 
         actionButton(ns('df_button'), label = 'Apply Gating'),
         actionButton(ns('proceed_button'), label = 'Proceed'),
@@ -305,24 +305,17 @@ fcb_select <- function(input, output, session, setup, x){
     exp_info <- reactive(
         setup()[['exp_info']]
     )
-
-    observe({
+    
+    observeEvent(exp_info(), {
         fcs_files <- names(fcs_flowframes())
+        print(fcs_files)
+        print("Refreshing file list")
         updateSelectInput(session, 'db_fcb_fcs', choices = fcs_files, selected = head(fcs_files, 1))
         updateSelectInput(session, 'db_bc1_fcs', choices = c(fcs_files, "none"), selected = "none")
         updateSelectInput(session, 'db_bc2_fcs', choices = c(fcs_files, "none"), selected = "none")
 
-        selected_fcb <- fcs_flowframes()[[input$db_fcb_fcs]]
+        
 
-        if(!is.null(selected_fcb)) {
-            channels <- unname(colnames(flowCore::exprs(selected_fcb)))
-            updateSelectInput(session, 'db_bc1_channel',
-                              choices = channels,
-                              selected = head(channels, 2))
-            updateSelectInput(session, 'db_bc2_channel',
-                              choices = channels,
-                              selected = head(channels, 1))
-        }
 
         pop_ch <- exp_info()[['exp_pops']]['name']
         updateSelectInput(session, 'db_pop', choices = pop_ch)
@@ -331,6 +324,20 @@ fcb_select <- function(input, output, session, setup, x){
         comps <- names(exp_info()[['exp_comps']])
         updateSelectInput(session, 'db_fcb_comp', choices = c("internal compensation", comps))
     })
+    
+    observeEvent(input$db_fcb_fcs, {
+                 selected_fcb <- fcs_flowframes()[[input$db_fcb_fcs]]
+                 if(!is.null(selected_fcb)) {
+                   channels <- unname(colnames(flowCore::exprs(selected_fcb)))
+                   updateSelectInput(session, 'db_bc1_channel',
+                                     choices = channels,
+                                     selected = head(channels, 2))
+                   updateSelectInput(session, 'db_bc2_channel',
+                                     choices = channels,
+                                     selected = head(channels, 1))
+                 }
+      }
+      )
 
     #returns the matrix of the selected comp
     #maybe should move, might break if input$df_button is clicked before fcs files are downloaded

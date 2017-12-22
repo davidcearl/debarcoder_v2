@@ -3,40 +3,57 @@
 ## helper functions
 
 ##redundant?
-debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, opt,
-                          updateProgress = NULL, subsample = 10e3, cofactor =NULL){
-    mydf <- debarcode_1(fcb_df = fcb_df, bc_single_level = bc1_df,
-                        channel = channel, levels = levels,
-                        uccutoff = uccutoff, opt = opt, trans = 'arcsinh',
-                        subsample = subsample, updateProgress = updateProgress, cofactor_bc1 = cofactor)
-
-    return(mydf)
+debarcode_bc1 <- function(fcb_df, bc1_df, channel, levels, uccutoff, dist,
+                          updateProgress = NULL, subsample = 10e3, cofactor =NULL,
+                          likelihoodcut = NULL){
+  mydf <- debarcode_1(fcb_df = fcb_df, bc_single_level = bc1_df,
+                      channel = channel, levels = levels,
+                      uccutoff = uccutoff, dist = dist, trans = 'arcsinh',
+                      subsample = subsample, updateProgress = updateProgress,
+                      cofactor_bc1 = cofactor, likelihoodcut = likelihoodcut)
+  
+  return(mydf)
 }
 
 
 #takes fcb_df_po_debarcoded, ??not pb_df??
 #requires debarcoder.R
 #which parameters should user be able to set in shiny ui?
-debarcode_bc2 <- function(bc1_debarcoded, prevchannel, channel, levels, cofactor_bc1 = NULL, cofactor_bc2 = NULL){
-    mydf2 <- debarcode.2(fcb_df = bc1_debarcoded,
-                         prevchannel = prevchannel,
-                         channel = channel,
-                         levels = levels, 
-                         cofactor_bc1 = cofactor_bc1,
-                         cofactor_bc2 = cofactor_bc2)
-    return(mydf2)
+debarcode_bc2 <- function(bc1_debarcoded, prevchannel, channel, levels,
+                          cofactor_bc1 = NULL, cofactor_bc2 = NULL,
+                          likelihoodcut = NULL){
+  mydf2 <- debarcode.2(fcb_df = bc1_debarcoded,
+                       prevchannel = prevchannel,
+                       channel = channel,
+                       levels = levels, 
+                       cofactor_bc1 = cofactor_bc1,
+                       cofactor_bc2 = cofactor_bc2, 
+                       likelihoodcut = likelihoodcut)
+  return(mydf2)
 }
 
 ## ui
 
 
-run_debarcoder_ui <- function(id) {
+run_debarcoder3_ui <- function(id) {
     ns <- NS(id)
-
     tagList(
+        fluidRow(
+          h4('Select the Barcoded Population'),
+          uiOutput(ns("uptakeSelect"))
+          #sliderInput(ns('uptake_cutoff'), label = "Uptake Dye Confidence Cutoff", min = 0, max = 0.5, value = 0.05, step = 0.01),
+          #actionButton(ns('submit_uptake'), label = 'Identify Barcoded Population'),
+          #plotOutput(ns('uptakeplot'))
+          
+          
+        #    selectInput(ns("db_uptake_channel"),
+        #                label = 'Uptake control',
+        #                c('none'))
+         ),
         fluidRow(
             #selectInput(ns("bc1_file"), label = 'BC1', c('none')),
             #selectInput(ns("fcb_file"), label = 'FCB', c('none')),
+            # h1('Debarcoder w/ 3 Dyes'), 
             sliderInput(ns('bc1_levels'), label = "Number of BC Levels", min = 1, max = 12, value = 6, step = 1, ticks = FALSE),
             sliderInput(ns('bc1_unccutoff'), label = "Assignment Cutoff", min = 0, max = 0.5, value = 0.05, step = 0.01),
             selectInput(ns('bc1_model'), label = "Model to use", c("Fit skew.normal" = 4)),
@@ -66,7 +83,73 @@ run_debarcoder_ui <- function(id) {
 # modulue reactive fuction
 ###
 
-run_debarcoder <- function(input, output, session, fcb_dfs, x) {
+run_debarcoder3 <- function(input, output, session, fcb_dfs, x) {
+    
+    # channels <- eventReactive(fcb_dfs(), {
+    #   print("78")
+    #   colnames(fcb_dfs()[[1]][[1]])
+    # })
+    # 
+    # observe({
+    #   print(channels)
+    # })
+     output$uptakeSelect <- renderUI({
+       ns <- session$ns
+       channels <- colnames(fcb_dfs()[[1]][[1]])
+       selectInput(ns("uptake_select"), "Select Uptake Channel",
+                     channels, selected = head(channels)) 
+     })
+
+    # output$select_uptake_channel <- renderUI({
+    #   selectInput("db_uptake_channel", "SelectUptakeCahnnel:", colnames(fcb_dfs())) 
+    # })
+    
+    # observeEvent(input$bc1_levels, {
+    #   print(input$bc1_level)
+    #   channels <- colnames(fcb_dfs()[[1]][[1]])
+    #   print(channels)
+    #   updateSelectInput(session, 'db_uptake_channel',
+    #                     choices = channels,
+    #                     selected = head(channels, 1))
+    # })
+    # 
+    fully_barcoded <- eventReactive(input$submit_uptake, {
+      uptake_ch <- input$uptake_select
+      print(uptake_ch)
+      fcb_df <- fcb_dfs()[[1]][[1]]
+      bc1_df <- fcb_dfs()[[1]][[2]]
+      if(is.null(bc1_df)){
+        bc1_df <- fcb_df
+      }
+      lut <- fcb_dfs()[["modulelog"]][["exp_info"]][["exp_lut"]]
+      cofactor_uptake<- lut[(which(lut$shortName == uptake_ch)), "cofactor"]
+      
+      progress <- shiny::Progress$new()
+      progress$set(message = "Indenitfying barcoded cells: ", value = 0)
+      on.exit(progress$close())
+      n <- 5
+      updateProgress <- function(detail = NULL) {
+        progress$inc(amount = 1/n, detail = detail)
+      }
+      
+      
+      debarcoded_bc1 <- debarcode_bc1(fcb_df = fcb_df,
+                                      bc1_df = bc1_df,
+                                      channel = uptake_ch,
+                                      levels = 1,
+                                      uccutoff = input$uptake_cutoff,
+                                      opt = "skew.normal",
+                                      updateProgress= updateProgress,
+                                      subsample = 10e3, 
+                                      cofactor = cofactor_uptake
+      )
+      return(debarcoded_bc1)
+      #uptake_ch <- 
+      #print(uptake_ch)
+    })
+    
+    output$uptakeplot <- renderPlot(fully_barcoded()[["plot"]])
+    
     dbc1 <- eventReactive(input$submit_dbc1, {
 
         #####
@@ -74,6 +157,7 @@ run_debarcoder <- function(input, output, session, fcb_dfs, x) {
         #fcb_file <- ch[1]
         bc1_channel <- fcb_dfs()[[1]][['bc1_channel']]
         bc2_channel <- fcb_dfs()[[1]][['bc2_channel']]
+        uptake_channel <- input$uptake_select
         fcb_df <- fcb_dfs()[[1]][[1]]
         bc1_df <- fcb_dfs()[[1]][[2]]
         if(is.null(bc1_df)){
@@ -98,7 +182,6 @@ run_debarcoder <- function(input, output, session, fcb_dfs, x) {
         lut <- fcb_dfs()[["modulelog"]][["exp_info"]][["exp_lut"]]
         cofactor_bc1<- lut[(which(lut$shortName == bc1_channel)), "cofactor"]
         
-        write.csv(fcb_df, "fcb_df.csv")
         debarcoded_bc1 <- debarcode_bc1(fcb_df = fcb_df,
                                         bc1_df = bc1_df,
                                         channel = bc1_channel,
