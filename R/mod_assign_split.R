@@ -11,17 +11,17 @@ assign_wells <- function(bc1, bc2, debarcoded_df) {
     }
 
     col_equ <- function(col_bc_level, highest_col_bc) {return((highest_col_bc + (col_bc_level-1)))}
-    #col high > low
+
     if(colbc[["high"]] > colbc[["low"]]){
         col_equ <- function(col_bc_level, highest_col_bc) {return((highest_col_bc - (col_bc_level - 1)))}
-        print(1)
+        #print(1)
     }
 
     row_equ <- function(row_bc_level, highest_row_bc) {return(12*((highest_row_bc + (row_bc_level-1))-1))}
     #row high > low
     if(rowbc[["high"]] > rowbc[["low"]]){
         row_equ <- function(row_bc_level, highest_row_bc) {return(12*((highest_row_bc - (row_bc_level-1))-1))}
-        print(3)
+        #print(3)
     }
 
     colvals <- col_equ(debarcoded_df$bc1, colbc[[2]])
@@ -77,12 +77,12 @@ split_and_write_fcs <- function(well_assigned_df, gated_flowFrame, comp_matrix, 
         pop <- well_assigned_df[which(well_assigned_df$well==well_number), colnames(flowCore::exprs(gated_flowFrame))]
 
         pop <- as.matrix(pop)
-        #print(str(pop))
-        #print(attributes(pop))
+
         colnames(pop) <- fcscolnames
         pop_ff <- flowCore::flowFrame(pop,
                                       description = flowCore::description(gated_flowFrame),
                                       parameters = flowCore::parameters(gated_flowFrame))
+
         pop_ff.uncomp <- flowCore::compensate(pop_ff, solve(comp_matrix))
         flowCore::description(pop_ff.uncomp) <- flowCore::description(gated_flowFrame)
         flowCore::parameters(pop_ff.uncomp) <- flowCore::parameters(gated_flowFrame)
@@ -114,6 +114,7 @@ assign_split_ui <- function(id){
       actionButton(ns('write_file'), label = 'save csv'),
       actionButton(ns('split_fcs'), label = 'write fcs files'),
       actionButton(ns('writelog'), label = 'save session'),
+      textInput(ns("prefix"), label = "File Prefix:"),
       br(), 
       br(), 
       actionButton(ns('proceed_button'), label = 'Proceed')
@@ -141,6 +142,10 @@ assign_split <- function(input, output, session, setup, fcb, debarcoded, x){
   })
   
 layouts <- eventReactive(input$check_layout, {
+      fcsprefix <-fcb()[[2]][["db_fcb_fcs"]]
+      fcsprefix<- gsub(" ", "_", fcsprefix)
+      updateTextInput(session, "prefix", value = fcsprefix)
+      
       row1 <- origin_well()[["row1"]]
       col1 <- origin_well()[["col1"]]
       nrow <- as.numeric(input$nrow)
@@ -183,15 +188,7 @@ layouts <- eventReactive(input$check_layout, {
     bc1_row <- bc1_row()
     bc1_levels <- debarcoded()[["modulelog"]][["bc1"]][["bc1levels"]]
     bc2_levels <- debarcoded()[["modulelog"]][["bc2"]][["bc2levels"]]
-    # print(paste("layout_df", str(layout_df)))
-    # print(paste("row1", row1))
-    # print(paste("col1", col1))
-    # print(paste("nrow", nrow))
-    # print(paste("ncol", ncol))
-    # print(paste("bc1_row", bc1_row))
-    # print(paste("bc1_levels", bc1_levels))
-    # print(paste("bc2_levels", bc2_levels))
-    
+
     
     myplot <- ggplot2::ggplot(layout_df, ggplot2::aes(x = col, y = row)) + 
       ggplot2::geom_tile(ggplot2::aes(fill = as.factor(-bc1)), col = "grey50") + 
@@ -212,14 +209,7 @@ layouts <- eventReactive(input$check_layout, {
     bc1_row <- bc1_row()
     bc1_levels <- debarcoded()[["modulelog"]][["bc1"]][["bc1levels"]]
     bc2_levels <- debarcoded()[["modulelog"]][["bc2"]][["bc2levels"]]
-    # print(paste("layout_df", str(layout_df)))
-    # print(paste("row1", row1))
-    # print(paste("col1", col1))
-    # print(paste("nrow", nrow))
-    # print(paste("ncol", ncol))
-    # print(paste("bc1_row", bc1_row))
-    # print(paste("bc1_levels", bc1_levels))
-    # print(paste("bc2_levels", bc2_levels))
+
     
     
     mypalette <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, "Blues"))(bc2_levels)
@@ -246,9 +236,6 @@ layouts <- eventReactive(input$check_layout, {
 
 
     observeEvent(input$split_fcs, {
-        fcsprefix <-fcb()[[2]][["db_fcb_fcs"]]
-        fcsprefix<- gsub(" ", "_", fcsprefix)
-        
         layout.m <- layouts()[["layout_bc_well.m"]]
         well_assigned_df <- debarcoded()[[1]]
         #print(layout.m)
@@ -274,7 +261,7 @@ layouts <- eventReactive(input$check_layout, {
         }
 
 
-        split_and_write_fcs(well_assigned_df, orig.flow.frame, comp, exp_id, prefix = fcsprefix, updateProgress = updateProgress)
+        split_and_write_fcs(well_assigned_df, orig.flow.frame, comp, exp_id, prefix = input$prefix, updateProgress = updateProgress)
 
     })
 

@@ -59,19 +59,19 @@ ui <- navbarPage(title = 'DebarcodeR', id = "mainNavbarPage",
                           value = 'tab3',
                           sidebarLayout(
                             sidebarPanel(
-                              
-                              radioButtons("bctype", "Barcode Format",
-                                           c("2 Dyes" = "2dye",
-                                             "2 Dyes + Uptake Control" = "3dye"), 
-                                           inline = TRUE),
-                              helpText("1. Specifiy the number of levels
-                                       of BC1 with the slider"),
-                              helpText("2. Specifiy the uncertainty
-                                       cutoff"),
-                              helpText("Events below the cutoff will not
-                                       be assinged to a BC level"),
-                              helpText("3. Select the model to use
-                                       for debarcoding"),
+                              helpText("1. Specificy the Morphology correction method.
+                                       This corrects for the influence of cellular protein content
+                                       on barcoding staining. A dedicated uptake control provides the best results, 
+                                       but forward and side scatter can also be used to esimate cellular protien content"),
+                              helpText("2. Select a modeling method. Gaussian mixture modeling uses parametric modeling to
+                                       estimate the probability for each cell originating from each population, while 
+                                       Jenks Natural Breaks Optimization non-parametrically splits the data into 
+                                       a specified number of groups for optimial seperation. Choose gaussian mixture modeling if
+                                       there is substantial overlap between one more populations.Otherwise, guassian mxiture modeling
+                                       provides better results and the cost of increased runtime."),
+                              helpText("3. Select the thresholds for assigning cells. If 
+                                       gaussian mixture modeling was used, the ambiguity cutoff can also be set. 
+                                       Lower thresholds are more stringent and will result in lower cell yields."),
                               helpText("4. Click run BC1 debarcoder"),
                               helpText("This will take a few minutes to
                                        run. If the output plots look good

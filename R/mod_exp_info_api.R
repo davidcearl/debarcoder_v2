@@ -13,7 +13,7 @@ exp_id_from_downloaded_files <- function() {
 #get exp population list from cytobank api
 get_populations <- function(cyto_session, exp_id){
   print(exp_id)
-    return(CytobankAPI::populations.list(cyto_session, exp_id,  output = "default"))
+  return(CytobankAPI::populations.list(cyto_session, exp_id,  output = "default"))
 }
 
 #get exp gate list from cytobank api
