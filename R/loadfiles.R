@@ -1,5 +1,6 @@
 source("./R/launch.R")
 source("./R/mod_assign_split.R")
+source("./R/mod_morpho.R")
 #source("./R/mod_debarcoder.R")
 source("./R/mod_debarcoder_2dye.R")
 source("./R/mod_debarcoder_3dye.R")

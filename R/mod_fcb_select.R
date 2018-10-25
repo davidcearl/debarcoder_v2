@@ -181,7 +181,7 @@ gate_population <- function(flow_frame, population, poplist, gatelist, gate_defs
     
     channel.ind<- match(gate_defs[[i]][["channels"]],   as.character(lut$shortName))
     channel.char <- gate_defs[[i]][["channels"]]
-    
+    print(lut)
     if (any(lut[channel.ind, "scaleType"] == 4)) { #transforms arcsinh channels approraitely
       ind <- which(lut[channel.ind, "scaleType"] == 4)
       flowCore::exprs(flow_frame)[,channel.char[ind]] <- asinh(flowCore::exprs(flow_frame)[,channel.char[ind]]/lut[channel.ind[ind], "cofactor"])
@@ -217,6 +217,8 @@ gate_population <- function(flow_frame, population, poplist, gatelist, gate_defs
       flowCore::exprs(flow_frame)[,channel.char[ind]] <- sinh(flowCore::exprs(flow_frame)[,channel.char[ind]])*lut[channel.ind[ind], "cofactor"]
     }
   }
+  
+  print(nrow(flowCore::exprs(flow_frame)))
   return(flow_frame)
 }
 #get dataframe from flowFrame
@@ -285,8 +287,8 @@ fcb_select_ui <- function(id){
                      #          c('none'))
             )
         ),
-        sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Threshold', min = -500, max = 2000, value = 100, step = 50),
-        sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Threshold', min = -500, max = 2000, value = 100, step = 50),
+        sliderInput(ns('bc1_sig_cutoff'), label = 'BC1 Threshold', min = -1000, max = 2000, value = 100, step = 50),
+        sliderInput(ns('bc2_sig_cutoff'), label = 'BC2 Threshold', min = -1000, max = 2000, value = 100, step = 50),
 
         actionButton(ns('df_button'), label = 'Apply Gating'),
         actionButton(ns('proceed_button'), label = 'Proceed'),

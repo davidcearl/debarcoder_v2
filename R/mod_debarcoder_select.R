@@ -8,7 +8,10 @@ debarcode_select_ui <- function(id){
       fluidRow(
         # h1('My Text'),
         # textOutput(ns('bc_type')),
-        uiOutput(ns('debarcoder_ui'))
+        tabsetPanel(
+          tabPanel("Level-1", uiOutput(ns('debarcoder_ui_1'))),
+          tabPanel("Level-2", uiOutput(ns('debarcoder_ui_2')))
+        )
        # uiOutput(ns('mode_ui'))
       )
     )
@@ -19,31 +22,22 @@ debarcode_select_ui <- function(id){
 debarcode_select <- function(input, output, session, fcb_dfs, bc_type, x){
  # print(bc_type)
   output$bc_type <- renderText(bc_type())
+  debarcode_l1 <- callModule(run_debarcoder, 'run_debarcoder1', fcb_dfs, x,
+                             channel = fcb_dfs()[[1]][['bc1_channel']])
+  debarcode_l2 <- callModule(run_debarcoder, 'run_debarcoder2', fcb_dfs, x,
+                             channel = fcb_dfs()[[1]][['bc2_channel']], bc_prev.df = debarcode_l1)
   
-  debarcode2 <- callModule(run_debarcoder2, 'run_debarcoder2', fcb_dfs, x)
-  debarcode3 <- callModule(run_debarcoder3, 'run_debarcoder3', fcb_dfs, x)
-  
-  output$debarcoder_ui <- renderUI({
+  output$debarcoder_ui_1 <- renderUI({
     ns <- session$ns
-    if(bc_type() == '2dye'){
-      #print('29, 2dye')
-      return(run_debarcoder2_ui(ns('run_debarcoder2')))
-    } else if(bc_type() == '3dye') {
-      return(run_debarcoder3_ui(ns('run_debarcoder3')))
-    }
+    return(run_debarcoder_ui(ns('run_debarcoder1')))
   })
   
-  mode <- reactive({
+  output$debarcoder_ui_2 <- renderUI({
     ns <- session$ns
-    #print(bc_type())
-    if(bc_type() == '2dye'){
-      return(debarcode2())
-    } else if (bc_type() == '3dye') {
-      return(debarcode3())
-    }
+    return(run_debarcoder_ui(ns('run_debarcoder2')))
   })
   
-  return(mode)
+  return(debarcode_l2)
     # demo_exp <- callModule(demo_mode, 'demo_mode', x)
     # api_exp <- callModule(api_mode, 'api_mode', x)
     # callModule(reproduce_mode, 'reproduce_mode')
